@@ -11,7 +11,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
@@ -41,6 +41,16 @@ export default function AdminPage() {
     setLoading(false);
   };
 
+  const inputStyle = {
+    width: '100%',
+    padding: '12px',
+    marginBottom: '15px',
+    border: '1px solid #ccc',
+    borderRadius: '8px',
+    fontSize: '16px',
+    boxSizing: 'border-box' as const
+  };
+
   return (
     <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '500px', margin: '0 auto' }}>
       <h1 style={{ fontSize: '24px', marginBottom: '20px' }}>Add New Location</h1>
@@ -58,51 +68,43 @@ export default function AdminPage() {
       )}
 
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Location Name</label>
-          <input
-            type="text"
-            placeholder="e.g., ABC Lounge"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
-          />
-        </div>
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Location Name *</label>
+        <input
+          style={inputStyle}
+          type="text"
+          placeholder="e.g., ABC Lounge"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
 
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Address</label>
-          <input
-            type="text"
-            placeholder="e.g., 123 Main St"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            required
-            style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
-          />
-        </div>
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Address *</label>
+        <input
+          style={inputStyle}
+          type="text"
+          placeholder="e.g., 123 Main St, Akure"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          required
+        />
 
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Owner Name</label>
-          <input
-            type="text"
-            placeholder="Owner Name"
-            value={ownerName}
-            onChange={(e) => setOwnerName(e.target.value)}
-            style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
-          />
-        </div>
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Owner Name</label>
+        <input
+          style={inputStyle}
+          type="text"
+          placeholder="e.g., John Doe"
+          value={ownerName}
+          onChange={(e) => setOwnerName(e.target.value)}
+        />
 
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Owner Phone</label>
-          <input
-            type="tel"
-            placeholder="08012345678"
-            value={ownerPhone}
-            onChange={(e) => setOwnerPhone(e.target.value)}
-            style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
-          />
-        </div>
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Owner Phone</label>
+        <input
+          style={inputStyle}
+          type="tel"
+          placeholder="e.g., 08012345678"
+          value={ownerPhone}
+          onChange={(e) => setOwnerPhone(e.target.value)}
+        />
 
         <button
           type="submit"
@@ -115,7 +117,8 @@ export default function AdminPage() {
             border: 'none',
             borderRadius: '8px',
             fontSize: '18px',
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            cursor: loading ? 'not-allowed' : 'pointer'
           }}
         >
           {loading ? 'Saving...' : 'Save Location'}
@@ -123,7 +126,7 @@ export default function AdminPage() {
       </form>
 
       <div style={{ marginTop: '30px', textAlign: 'center' }}>
-        <a href="/" style={{ color: '#2563eb' }}>Back to Home</a>
+        <a href="/" style={{ color: '#2563eb', textDecoration: 'none' }}>← Back to Home</a>
       </div>
     </main>
   );
