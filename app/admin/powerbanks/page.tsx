@@ -7,6 +7,7 @@ export default function AddPowerBankPage() {
   const [locations, setLocations] = useState<any[]>([]);
   const [selectedLocation, setSelectedLocation] = useState('');
   const [pbCode, setPbCode] = useState('');
+  const [lastAddedCode, setLastAddedCode] = useState(''); // Store the last added code
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [qrCodeUrl, setQrCodeUrl] = useState('');
@@ -47,12 +48,16 @@ export default function AddPowerBankPage() {
     } else {
       setMessage('Success! Power Bank ' + pbCode + ' added.');
       
-      // Automatically generate QR Code with the correct query parameter URL
+      // Store the code for display and QR generation
+      setLastAddedCode(pbCode);
+      
+      // Generate QR Code with the correct URL
       const staffUrl = `https://okcharge.pages.dev/staff/pb?code=${pbCode}`;
       const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(staffUrl)}`;
       setQrCodeUrl(qrApiUrl);
       
-      setPbCode(''); // Clear the input for the next one
+      // Only clear the input field, keep lastAddedCode for display
+      setPbCode('');
     }
     setLoading(false);
   };
@@ -125,8 +130,8 @@ export default function AddPowerBankPage() {
         </button>
       </form>
 
-      {/* QR Code Display Section */}
-      {qrCodeUrl && (
+      {/* QR Code Display Section - Only show if we have a QR code */}
+      {qrCodeUrl && lastAddedCode && (
         <div style={{ 
           marginTop: '30px', 
           padding: '20px', 
@@ -138,13 +143,31 @@ export default function AddPowerBankPage() {
           <h3 style={{ margin: '0 0 15px 0', color: '#0f172a' }}>Scan to Manage this Power Bank</h3>
           <img 
             src={qrCodeUrl} 
-            alt={`QR Code for ${pbCode}`} 
+            alt={`QR Code for ${lastAddedCode}`} 
             style={{ width: '250px', height: '250px', borderRadius: '8px' }} 
           />
           <p style={{ marginTop: '15px', fontSize: '14px', color: '#64748b', wordBreak: 'break-all' }}>
-            URL: <strong>{`https://okcharge.pages.dev/staff/pb?code=${pbCode}`}</strong><br/><br/>
+            <strong>Code: {lastAddedCode}</strong><br/>
+            URL: {`https://okcharge.pages.dev/staff/pb?code=${lastAddedCode}`}<br/><br/>
             Take a screenshot, print this, and stick it on the power bank!
           </p>
+          <button
+            onClick={() => {
+              setQrCodeUrl('');
+              setLastAddedCode('');
+            }}
+            style={{
+              marginTop: '10px',
+              padding: '10px 20px',
+              backgroundColor: '#64748b',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            Add Another Power Bank
+          </button>
         </div>
       )}
 
