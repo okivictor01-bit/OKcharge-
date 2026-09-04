@@ -7,29 +7,21 @@ export default function AdminPage() {
   const [formData, setFormData] = useState({
     name: '',
     address: '',
-    city: 'Akure', // Default city
+    city: 'Akure',
     owner_name: '',
     owner_phone: ''
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  // Comprehensive list of Southwest Nigeria towns
   const cities = [
-    // Ondo State
     'Akure', 'Ore', 'Okitipupa', 'Ondo', 'Owo', 'Ikare-Akoko', 'Oka-Akoko', 'Idanre', 'Ifon', 'Ode-Irele', 'Igbokoda', 'Ayetoro', 'Araromi', 'Ijebu-Igbo',
-    // Lagos State
     'Lagos', 'Ikeja', 'Epe', 'Ikorodu', 'Badagry', 'Lekki', 'Surulere', 'Yaba', 'Mushin', 'Oshodi', 'Agege', 'Alimosho',
-    // Oyo State
     'Ibadan', 'Ogbomoso', 'Oyo', 'Iseyin', 'Saki', 'Igboho', 'Eruwa', 'Kishi', 'Igbeti', 'Lalupon', 'Moniya', 'Bodija', 'Ring Road', 'Dugbe', 'Challenge', 'Iwo',
-    // Osun State
     'Osogbo', 'Ilesa', 'Ife', 'Ede', 'Iwo', 'Ila-Orangun', 'Oke-Ila', 'Ikirun', 'Iragbiji', 'Modakeke', 'Ejigbo', 'Ikire', 'Inisa', 'Ipetumodu',
-    // Ogun State
     'Abeokuta', 'Ijebu-Ode', 'Sagamu', 'Ota', 'Ijebu-Igbo', 'Ilaro', 'Ago-Iwoye', 'Owode', 'Odeda', 'Iperu', 'Remo', 'Isheri',
-    // Ekiti State
     'Ado-Ekiti', 'Ikere-Ekiti', 'Emure-Ekiti', 'Omuo-Ekiti', 'Ijero-Ekiti', 'Aramoko-Ekiti', 'Ise-Ekiti', 'Oye-Ekiti', 'Ilupeju-Ekiti',
-    // Kwara State
-    'Ilorin', 'Offa', 'Omu-Aran', 'Lafiagi', 'Patigi', 'Jebba', 'Kaiama', 'Share', 'Omu-Aran'
+    'Ilorin', 'Offa', 'Omu-Aran', 'Lafiagi', 'Patigi', 'Jebba', 'Kaiama', 'Share'
   ];
 
   const handleSubmit = async (e: any) => {
@@ -40,7 +32,6 @@ export default function AdminPage() {
     let lat = null;
     let lng = null;
 
-    // 1. Try to automatically find coordinates
     try {
       const searchQuery = `${formData.address}, ${formData.city}, Nigeria`;
       const response = await fetch(
@@ -56,7 +47,6 @@ export default function AdminPage() {
       console.error('Geocoding error:', error);
     }
 
-    // 2. Save to database
     const { error } = await supabase
       .from('locations')
       .insert([
@@ -97,8 +87,13 @@ export default function AdminPage() {
 
   return (
     <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '500px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '24px', marginBottom: '20px' }}>Add New Location</h1>
+      <h1 style={{ fontSize: '24px', marginBottom: '10px' }}>Add New Location</h1>
       
+      {/* NEW DASHBOARD LINK */}
+      <a href="/admin/dashboard" style={{ display: 'inline-block', marginBottom: '20px', color: '#2563eb', textDecoration: 'none', fontWeight: 'bold' }}>
+        ← View Admin Dashboard
+      </a>
+
       {message && (
         <div style={{ 
           padding: '15px', 
