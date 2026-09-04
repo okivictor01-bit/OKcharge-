@@ -135,7 +135,8 @@ export default function RentPage() {
     }
   };
 
-  const inputStyle = {
+  // FIXED: Explicitly typed as React.CSSProperties
+  const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '15px',
     marginBottom: '20px',
