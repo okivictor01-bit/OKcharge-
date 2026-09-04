@@ -16,6 +16,7 @@ export default function MapPage() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [geocodingStatus, setGeocodingStatus] = useState('');
 
   useEffect(() => {
     fetchLocations();
@@ -30,77 +31,60 @@ export default function MapPage() {
     
     if (data) {
       setLocations(data);
-      // Auto-geocode locations without coordinates
-      data.forEach(async (loc) => {
-        if (!loc.latitude && loc.address) {
+      
+      // Check which locations need geocoding
+      const needGeocoding = data.filter(loc => !loc.latitude && loc.address);
+      
+      if (needGeocoding.length > 0) {
+        setGeocodingStatus(`Finding coordinates for ${needGeocoding.length} location(s)...`);
+        
+        // Geocode them one by one
+        for (const loc of needGeocoding) {
           await geocodeAddress(loc.id, loc.address);
         }
-      });
+        
+        setGeocodingStatus('');
+        // Refresh after geocoding
+        setTimeout(() => fetchLocations(), 1000);
+      }
     }
     setLoading(false);
   };
 
   const geocodeAddress = async (locationId: string, address: string) => {
     try {
-      // Southwest Nigeria cities for better search
-      const southwestCities = [
-        'Lagos, Nigeria',
-        'Ibadan, Nigeria',
-        'Akure, Nigeria',
-        'Abeokuta, Nigeria',
-        'Osogbo, Nigeria',
-        'Ado-Ekiti, Nigeria',
-        'Ilorin, Nigeria',
-        'Ogbomoso, Nigeria',
-        'Ikeja, Nigeria',
-        'Ijebu-Ode, Nigeria'
+      // Try different search formats
+      const searches = [
+        address,
+        `${address}, Akure, Nigeria`,
+        `${address}, Ondo State, Nigeria`,
+        `${address}, Nigeria`
       ];
       
-      // Try searching with the address as-is first
-      let searchQuery = address;
-      let response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=ng`
-      );
-      let data = await response.json();
-      
-      // If no results, try adding Southwest Nigeria context
-      if (!data || data.length === 0) {
-        searchQuery = `${address}, Southwest Nigeria`;
-        response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`
+      for (const searchQuery of searches) {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`
         );
-        data = await response.json();
-      }
-      
-      // If still no results, try each major city
-      if (!data || data.length === 0) {
-        for (const city of southwestCities) {
-          searchQuery = `${address}, ${city}`;
-          response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`
-          );
-          data = await response.json();
-          if (data && data.length > 0) break;
+        const data = await response.json();
+        
+        if (data && data.length > 0) {
+          const lat = parseFloat(data[0].lat);
+          const lon = parseFloat(data[0].lon);
+          
+          await supabase
+            .from('locations')
+            .update({
+              latitude: lat,
+              longitude: lon
+            })
+            .eq('id', locationId);
+          
+          console.log(`Geocoded ${address} to ${lat}, ${lon}`);
+          return; // Success, stop trying
         }
       }
       
-      if (data && data.length > 0) {
-        const lat = parseFloat(data[0].lat);
-        const lon = parseFloat(data[0].lon);
-        
-        await supabase
-          .from('locations')
-          .update({
-            latitude: lat,
-            longitude: lon
-          })
-          .eq('id', locationId);
-        
-        // Refresh the list after a short delay to show the marker
-        setTimeout(() => fetchLocations(), 2000);
-      } else {
-        console.log(`Could not geocode: ${address}`);
-      }
+      console.log(`Could not geocode: ${address}`);
     } catch (error) {
       console.error('Geocoding error:', error);
     }
@@ -120,24 +104,27 @@ export default function MapPage() {
       script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
       script.onload = () => {
         const L = (window as any).L;
-        const map = L.map('map').setView([7.2571, 5.2054], 6); // Nigeria center
+        
+        const locationsWithCoords = locations.filter(l => l.latitude && l.longitude);
+        
+        // Default to Nigeria if no coordinates
+        const defaultCenter: [number, number] = [7.2571, 5.2054];
+        const defaultZoom = 6;
+        
+        const map = L.map('map').setView(defaultCenter, defaultZoom);
         
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        const locationsWithCoords = locations.filter(l => l.latitude && l.longitude);
-        
         if (locationsWithCoords.length > 0) {
           const bounds = L.latLngBounds(
             locationsWithCoords.map(l => [l.latitude!, l.longitude!])
           );
-          map.fitBounds(bounds);
+          map.fitBounds(bounds, { padding: [20, 20] });
 
           locationsWithCoords.forEach((loc) => {
             const marker = L.marker([loc.latitude!, loc.longitude!]).addTo(map);
-            
-            // FIXED: Added $ before {loc.phone ? ...}
             const popupContent = `
               <div style="min-width: 150px;">
                 <h3 style="margin: 0 0 5px 0; font-size: 14px; font-weight: bold;">${loc.name}</h3>
@@ -163,6 +150,19 @@ export default function MapPage() {
         <p>Loading map...</p>
       ) : (
         <>
+          {geocodingStatus && (
+            <div style={{
+              padding: '10px',
+              backgroundColor: '#fff3cd',
+              border: '1px solid #ffc107',
+              borderRadius: '8px',
+              marginBottom: '15px',
+              color: '#856404'
+            }}>
+              {geocodingStatus}
+            </div>
+          )}
+          
           <div 
             id="map" 
             style={{ 
@@ -184,12 +184,17 @@ export default function MapPage() {
                   marginBottom: '10px',
                   border: '1px solid #ddd',
                   borderRadius: '8px',
-                  backgroundColor: '#f9f9f9'
+                  backgroundColor: loc.latitude ? '#f9f9f9' : '#fff3cd'
                 }}
               >
                 <h3 style={{ margin: '0 0 5px 0', fontSize: '16px' }}>{loc.name}</h3>
                 <p style={{ margin: '0', color: '#666', fontSize: '14px' }}>{loc.address}</p>
                 {loc.phone && <p style={{ margin: '5px 0 0 0', fontSize: '14px' }}>📞 {loc.phone}</p>}
+                {loc.latitude ? (
+                  <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: 'green' }}>✓ Has GPS coordinates</p>
+                ) : (
+                  <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: 'orange' }}> No coordinates yet</p>
+                )}
               </div>
             ))}
           </div>
