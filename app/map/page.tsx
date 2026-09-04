@@ -42,10 +42,47 @@ export default function MapPage() {
 
   const geocodeAddress = async (locationId: string, address: string) => {
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`
+      // Southwest Nigeria cities for better search
+      const southwestCities = [
+        'Lagos, Nigeria',
+        'Ibadan, Nigeria',
+        'Akure, Nigeria',
+        'Abeokuta, Nigeria',
+        'Osogbo, Nigeria',
+        'Ado-Ekiti, Nigeria',
+        'Ilorin, Nigeria',
+        'Ogbomoso, Nigeria',
+        'Ikeja, Nigeria',
+        'Ijebu-Ode, Nigeria'
+      ];
+      
+      // Try searching with the address as-is first
+      let searchQuery = address;
+      let response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=ng`
       );
-      const data = await response.json();
+      let data = await response.json();
+      
+      // If no results, try adding Southwest Nigeria context
+      if (!data || data.length === 0) {
+        searchQuery = `${address}, Southwest Nigeria`;
+        response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`
+        );
+        data = await response.json();
+      }
+      
+      // If still no results, try each major city
+      if (!data || data.length === 0) {
+        for (const city of southwestCities) {
+          searchQuery = `${address}, ${city}`;
+          response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`
+          );
+          data = await response.json();
+          if (data && data.length > 0) break;
+        }
+      }
       
       if (data && data.length > 0) {
         const lat = parseFloat(data[0].lat);
@@ -59,8 +96,10 @@ export default function MapPage() {
           })
           .eq('id', locationId);
         
-        // Refresh the list
-        setTimeout(() => fetchLocations(), 1000);
+        // Refresh the list after a short delay to show the marker
+        setTimeout(() => fetchLocations(), 2000);
+      } else {
+        console.log(`Could not geocode: ${address}`);
       }
     } catch (error) {
       console.error('Geocoding error:', error);
@@ -101,7 +140,7 @@ export default function MapPage() {
               <div style="min-width: 150px;">
                 <h3 style="margin: 0 0 5px 0; font-size: 14px; font-weight: bold;">${loc.name}</h3>
                 <p style="margin: 0; font-size: 12px; color: #666;">${loc.address}</p>
-                ${loc.phone ? `<p style="margin: 5px 0 0 0; font-size: 12px;">📞 ${loc.phone}</p>` : ''}
+                {loc.phone ? `<p style="margin: 5px 0 0 0; font-size: 12px;">📞 ${loc.phone}</p>` : ''}
               </div>
             `;
             marker.bindPopup(popupContent);
