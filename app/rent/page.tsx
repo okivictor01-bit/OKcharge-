@@ -84,7 +84,7 @@ export default function RentPage() {
       await loadPaystackScript();
 
       const handler = (window as any).PaystackPop.setup({
-        key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+        key: 'pk_live_9dd06423b57f6a6f6927e3ea2e28a101baa01fba',
         email: email,
         amount: amount,
         currency: 'NGN',
@@ -135,7 +135,6 @@ export default function RentPage() {
     }
   };
 
-  // FIXED: Explicitly typed as React.CSSProperties
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '15px',
