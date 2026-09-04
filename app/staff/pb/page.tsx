@@ -29,7 +29,6 @@ function StaffPowerBankContent() {
     if (pb) {
       setPbData(pb);
       if (pb.status === 'rented') {
-        // Find the active rental linked to this power bank
         const { data: rental } = await supabase
           .from('rentals')
           .select('*')
@@ -51,7 +50,6 @@ function StaffPowerBankContent() {
     }
     setLoading(true);
 
-    // Find the paid rental with this ticket
     const { data: rental, error: rentalError } = await supabase
       .from('rentals')
       .select('*')
@@ -65,13 +63,12 @@ function StaffPowerBankContent() {
       return;
     }
 
-    // Update rental: set to active AND link to this power bank
     const { error: updateError } = await supabase
       .from('rentals')
       .update({
         status: 'active',
         started_at: new Date().toISOString(),
-        power_bank_id: pbData.id   // <-- THIS IS THE KEY FIX
+        power_bank_id: pbData.id
       })
       .eq('id', rental.id);
 
@@ -204,7 +201,7 @@ function StaffPowerBankContent() {
               <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#64748b' }}>Active Rental</p>
               <p style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#2563eb' }}>{activeRental.ticket_code}</p>
               <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#64748b' }}>
-                 {activeRental.customer_name || 'Customer'} • {activeRental.duration_hours || '?'} hrs
+                {activeRental.customer_name || 'Customer'} • {activeRental.duration_hours || '?'} hrs
               </p>
             </div>
           )}
@@ -227,7 +224,7 @@ function StaffPowerBankContent() {
             disabled={loading}
             style={{ width: '100%', padding: '15px', backgroundColor: '#f97316', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}
           >
-             Mark Lost
+            🚨 Mark Lost
           </button>
         </div>
       )}
@@ -246,7 +243,7 @@ function StaffPowerBankContent() {
       )}
 
       <div style={{ marginTop: '40px', textAlign: 'center' }}>
-        <a href="/admin" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '16px' }}>← Back to Admin Dashboard</a>
+        <a href="/staff" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '16px' }}>← Back to Staff Dashboard</a>
       </div>
     </main>
   );
