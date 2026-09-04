@@ -39,9 +39,8 @@ export default function AdminDashboard() {
       .from('rentals')
       .select('amount_paid, status, ticket_code, customer_name, created_at, locations(name)')
       .order('created_at', { ascending: false })
-      .limit(10); // Get last 10 for recent transactions
+      .limit(10);
 
-    // Calculate totals
     let totalRevenue = 0;
     let activeRentals = 0;
 
@@ -95,6 +94,22 @@ export default function AdminDashboard() {
     textAlign: 'center' as const
   };
 
+  const navButtonStyle = {
+    display: 'block',
+    width: '100%',
+    padding: '15px 20px',
+    marginBottom: '10px',
+    backgroundColor: 'white',
+    border: '1px solid #e2e8f0',
+    borderRadius: '10px',
+    textDecoration: 'none',
+    color: '#0f172a',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    textAlign: 'left' as const,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+  };
+
   return (
     <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '800px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
@@ -104,6 +119,23 @@ export default function AdminDashboard() {
           borderRadius: '8px', textDecoration: 'none', fontSize: '14px', fontWeight: 'bold' 
         }}>
           + Add Location
+        </a>
+      </div>
+
+      {/* Quick Navigation */}
+      <div style={{ marginBottom: '25px' }}>
+        <h2 style={{ fontSize: '18px', marginBottom: '12px', color: '#475569' }}>Quick Actions</h2>
+        
+        <a href="/admin/locations" style={navButtonStyle}>
+           Manage Locations <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>{stats.totalLocations} total →</span>
+        </a>
+        
+        <a href="/admin/powerbanks" style={navButtonStyle}>
+          🔋 Add Power Bank <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>{stats.availablePowerBanks} available →</span>
+        </a>
+
+        <a href="/staff" style={navButtonStyle}>
+          👷 Staff Dashboard <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>→</span>
         </a>
       </div>
 
