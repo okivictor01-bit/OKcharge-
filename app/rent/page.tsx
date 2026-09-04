@@ -142,7 +142,7 @@ export default function RentPage() {
     border: '1px solid #ddd',
     borderRadius: '8px',
     fontSize: '16px',
-    boxSizing: 'border-box' as const
+    boxSizing: 'border-box'
   };
 
   return (
@@ -264,4 +264,51 @@ export default function RentPage() {
 
             <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Phone Number *</label>
             <input
-              style
+              style={inputStyle}
+              type="tel"
+              placeholder="e.g., 08012345678"
+              value={customerPhone}
+              onChange={(e) => setCustomerPhone(e.target.value)}
+              required
+            />
+
+            <div style={{ 
+              backgroundColor: '#f8fafc', 
+              padding: '15px', 
+              borderRadius: '8px',
+              marginBottom: '20px',
+              textAlign: 'center'
+            }}>
+              <p style={{ margin: '0', fontSize: '14px', color: '#64748b' }}>Total Amount</p>
+              <h2 style={{ margin: '5px 0 0 0', fontSize: '28px', color: '#0f172a' }}>
+                ₦{pricing[duration].toLocaleString()}
+              </h2>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '18px',
+                backgroundColor: loading ? '#999' : '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '18px',
+                fontWeight: 'bold',
+                cursor: loading ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {loading ? 'Processing...' : 'Pay Now with Paystack'}
+            </button>
+          </form>
+
+          <div style={{ marginTop: '30px', textAlign: 'center' }}>
+            <a href="/" style={{ color: '#2563eb', textDecoration: 'none' }}>← Back to Home</a>
+          </div>
+        </>
+      )}
+    </main>
+  );
+}
