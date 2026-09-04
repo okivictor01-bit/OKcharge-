@@ -9,6 +9,7 @@ export default function AddPowerBankPage() {
   const [pbCode, setPbCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
 
   useEffect(() => {
     fetchLocations();
@@ -23,6 +24,7 @@ export default function AddPowerBankPage() {
     e.preventDefault();
     setLoading(true);
     setMessage('');
+    setQrCodeUrl('');
 
     if (!selectedLocation) {
       setMessage('Error: Please select a location.');
@@ -44,7 +46,14 @@ export default function AddPowerBankPage() {
       setMessage('Error: ' + error.message);
     } else {
       setMessage('Success! Power Bank ' + pbCode + ' added.');
-      setPbCode('');
+      
+      // Automatically generate QR Code
+      // The QR code will contain the URL for the staff to scan
+      const staffUrl = `https://okcharge.pages.dev/staff/pb/${pbCode}`;
+      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(staffUrl)}`;
+      setQrCodeUrl(qrApiUrl);
+      
+      setPbCode(''); // Clear the input for the next one
     }
     setLoading(false);
   };
@@ -113,9 +122,32 @@ export default function AddPowerBankPage() {
             fontWeight: 'bold'
           }}
         >
-          {loading ? 'Saving...' : 'Add Power Bank'}
+          {loading ? 'Adding...' : 'Add Power Bank & Generate QR'}
         </button>
       </form>
+
+      {/* QR Code Display Section */}
+      {qrCodeUrl && (
+        <div style={{ 
+          marginTop: '30px', 
+          padding: '20px', 
+          backgroundColor: '#f8fafc', 
+          borderRadius: '12px', 
+          textAlign: 'center',
+          border: '2px dashed #cbd5e1'
+        }}>
+          <h3 style={{ margin: '0 0 15px 0', color: '#0f172a' }}>Scan to Manage this Power Bank</h3>
+          <img 
+            src={qrCodeUrl} 
+            alt={`QR Code for ${pbCode}`} 
+            style={{ width: '250px', height: '250px', borderRadius: '8px' }} 
+          />
+          <p style={{ marginTop: '15px', fontSize: '14px', color: '#64748b' }}>
+            Code: <strong>{pbCode}</strong><br/>
+            Take a screenshot, print this, and stick it on the power bank!
+          </p>
+        </div>
+      )}
 
       <div style={{ marginTop: '30px', textAlign: 'center' }}>
         <a href="/admin" style={{ color: '#2563eb', textDecoration: 'none' }}>← Back to Admin</a>
