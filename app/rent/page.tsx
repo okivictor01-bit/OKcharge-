@@ -2,17 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import Script from 'next/script';
 
 interface Location {
   id: string;
   name: string;
   address: string;
-}
-
-declare global {
-  interface Window {
-    PaystackPop: any;
-  }
 }
 
 export default function RentPage() {
@@ -24,7 +19,7 @@ export default function RentPage() {
   const [loading, setLoading] = useState(false);
   const [ticket, setTicket] = useState('');
   const [error, setError] = useState('');
-  const [paystackLoaded, setPaystackLoaded] = useState(false);
+  const [paystackReady, setPaystackReady] = useState(false);
 
   const pricing: Record<string, number> = {
     '6': 300,
@@ -34,7 +29,6 @@ export default function RentPage() {
 
   useEffect(() => {
     fetchLocations();
-    loadPaystack();
   }, []);
 
   const fetchLocations = async () => {
@@ -46,26 +40,6 @@ export default function RentPage() {
     if (data) setLocations(data);
   };
 
-  const loadPaystack = () => {
-    if (typeof window !== 'undefined' && window.PaystackPop) {
-      setPaystackLoaded(true);
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://js.paystack.co/v1/inline.js';
-    script.async = true;
-    script.onload = () => {
-      console.log('Paystack script loaded successfully');
-      setPaystackLoaded(true);
-    };
-    script.onerror = () => {
-      console.error('Failed to load Paystack script');
-      setError('Payment system unavailable. Please refresh the page.');
-    };
-    document.body.appendChild(script);
-  };
-
   const generateTicketCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let result = 'RNT-';
@@ -75,7 +49,7 @@ export default function RentPage() {
     return result;
   };
 
-  const handlePayment = async (e: any) => {
+  const handlePayment = (e: any) => {
     e.preventDefault();
     
     if (!selectedLocation) {
@@ -86,10 +60,6 @@ export default function RentPage() {
       setError('Please fill in all fields');
       return;
     }
-    if (!window.PaystackPop) {
-      setError('Payment system not loaded. Please refresh and try again.');
-      return;
-    }
 
     setLoading(true);
     setError('');
@@ -98,62 +68,53 @@ export default function RentPage() {
     const ticketCode = generateTicketCode();
     const email = `${customerPhone.replace(/\s/g, '')}@okcharge.ng`;
 
+    // Use PaystackPop directly
+    const handler = (window as any).PaystackPop.setup({
+      key: 'pk_live_9dd06423b57f6a6f6927e3ea2e28a101baa01fba',
+      email: email,
+      amount: amount,
+      ref: ticketCode,
+      callback: function(response: any) {
+        console.log('Payment successful:', response);
+        saveRental(ticketCode, response.reference);
+      },
+      onClose: function() {
+        setError('Payment window closed');
+        setLoading(false);
+      }
+    });
+
+    handler.openIframe();
+  };
+
+  const saveRental = async (ticketCode: string, reference: string) => {
     try {
-      const handler = window.PaystackPop.setup({
-        key: 'pk_live_9dd06423b57f6a6f6927e3ea2e28a101baa01fba',
-        email: email,
-        amount: amount,
-        currency: 'NGN',
-        ref: ticketCode,
-        metadata: {
-          custom_fields: [
-            { display_name: 'Customer Name', variable_name: 'customer_name', value: customerName },
-            { display_name: 'Customer Phone', variable_name: 'customer_phone', value: customerPhone },
-            { display_name: 'Location ID', variable_name: 'location_id', value: selectedLocation },
-            { display_name: 'Duration', variable_name: 'duration', value: duration },
-            { display_name: 'Ticket Code', variable_name: 'ticket_code', value: ticketCode }
-          ]
-        },
-        callback: async (response: any) => {
-          console.log('Payment successful:', response);
-          
-          const { error } = await supabase
-            .from('rentals')
-            .insert([
-              {
-                ticket_code: ticketCode,
-                location_id: selectedLocation,
-                customer_name: customerName,
-                customer_phone: customerPhone,
-                duration_hours: parseInt(duration),
-                amount_paid: pricing[duration],
-                status: 'paid',
-                paystack_reference: response.reference,
-                created_at: new Date().toISOString()
-              }
-            ]);
-
-          if (error) {
-            console.error('Database error:', error);
-            setError('Payment successful but failed to save. Please contact support with ticket: ' + ticketCode);
-          } else {
-            setTicket(ticketCode);
+      const { error } = await supabase
+        .from('rentals')
+        .insert([
+          {
+            ticket_code: ticketCode,
+            location_id: selectedLocation,
+            customer_name: customerName,
+            customer_phone: customerPhone,
+            duration_hours: parseInt(duration),
+            amount_paid: pricing[duration],
+            status: 'paid',
+            paystack_reference: reference,
+            created_at: new Date().toISOString()
           }
-          setLoading(false);
-        },
-        onClose: () => {
-          console.log('Payment window closed');
-          setError('Payment window closed');
-          setLoading(false);
-        }
-      });
+        ]);
 
-      handler.openIframe();
-    } catch (err: any) {
-      console.error('Payment error:', err);
-      setError('Payment error: ' + err.message);
-      setLoading(false);
+      if (error) {
+        console.error('Database error:', error);
+        setError('Payment successful but failed to save. Ticket: ' + ticketCode);
+      } else {
+        setTicket(ticketCode);
+      }
+    } catch (err) {
+      setError('Error saving rental: ' + err);
     }
+    setLoading(false);
   };
 
   const inputStyle: React.CSSProperties = {
@@ -167,182 +128,198 @@ export default function RentPage() {
   };
 
   return (
-    <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '500px', margin: '0 auto' }}>
-      {ticket ? (
-        <div style={{ textAlign: 'center', padding: '20px' }}>
-          <div style={{ fontSize: '64px', marginBottom: '20px' }}>✅</div>
-          <h1 style={{ fontSize: '24px', marginBottom: '10px', color: '#0f172a' }}>Payment Successful!</h1>
-          <p style={{ color: '#64748b', marginBottom: '30px' }}>Your rental ticket is ready</p>
-          
-          <div style={{ 
-            backgroundColor: '#f8fafc', 
-            padding: '30px', 
-            borderRadius: '12px', 
-            border: '2px dashed #2563eb',
-            marginBottom: '20px'
-          }}>
-            <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '10px' }}>YOUR TICKET CODE</p>
-            <h2 style={{ 
-              fontSize: '32px', 
-              color: '#2563eb', 
-              margin: '0',
-              fontFamily: 'monospace',
-              letterSpacing: '2px'
-            }}>
-              {ticket}
-            </h2>
-          </div>
+    <>
+      {/* Load Paystack script using Next.js Script component */}
+      <Script 
+        src="https://js.paystack.co/v1/inline.js" 
+        strategy="afterInteractive"
+        onLoad={() => {
+          console.log('Paystack loaded');
+          setPaystackReady(true);
+        }}
+        onError={() => {
+          console.error('Failed to load Paystack');
+          setError('Payment system unavailable');
+        }}
+      />
 
-          <div style={{ 
-            backgroundColor: '#fff3cd', 
-            padding: '15px', 
-            borderRadius: '8px',
-            marginBottom: '20px',
-            textAlign: 'left'
-          }}>
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '16px' }}> What's Next?</h3>
-            <ol style={{ margin: 0, paddingLeft: '20px', fontSize: '14px' }}>
-              <li>Show this ticket code to the location staff</li>
-              <li>Staff will scan a power bank and enter your ticket</li>
-              <li>Collect the power bank and enjoy!</li>
-              <li>Return before {duration} hours to avoid extra charges</li>
-            </ol>
-          </div>
-
-          <button
-            onClick={() => window.print()}
-            style={{
-              width: '100%',
-              padding: '15px',
-              backgroundColor: '#2563eb',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              marginBottom: '10px',
-              cursor: 'pointer'
-            }}
-          >
-            📄 Print / Save Ticket
-          </button>
-
-          <a href="/" style={{ display: 'block', textAlign: 'center', color: '#2563eb', textDecoration: 'none', marginTop: '10px' }}>
-            ← Back to Home
-          </a>
-        </div>
-      ) : (
-        <>
-          <h1 style={{ fontSize: '24px', marginBottom: '10px' }}> Rent a Power Bank</h1>
-          <p style={{ color: '#64748b', marginBottom: '30px' }}>Fill in your details and pay securely</p>
-
-          {error && (
-            <div style={{ 
-              padding: '15px', 
-              backgroundColor: '#fee2e2', 
-              color: '#b91c1c',
-              borderRadius: '8px',
-              marginBottom: '20px'
-            }}>
-              {error}
-            </div>
-          )}
-
-          {!paystackLoaded && (
-            <div style={{ 
-              padding: '15px', 
-              backgroundColor: '#fff3cd', 
-              color: '#856404',
-              borderRadius: '8px',
-              marginBottom: '20px',
-              textAlign: 'center'
-            }}>
-              Loading payment system...
-            </div>
-          )}
-
-          <form onSubmit={handlePayment}>
-            <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Select Location *</label>
-            <select
-              style={inputStyle}
-              value={selectedLocation}
-              onChange={(e) => setSelectedLocation(e.target.value)}
-              required
-            >
-              <option value="">-- Choose a location --</option>
-              {locations.map((loc) => (
-                <option key={loc.id} value={loc.id}>{loc.name}</option>
-              ))}
-            </select>
-
-            <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Rental Duration *</label>
-            <select
-              style={inputStyle}
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-            >
-              <option value="6">6 hours - ₦300</option>
-              <option value="12">12 hours - ₦500</option>
-              <option value="24">24 hours - ₦800</option>
-            </select>
-
-            <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Your Name *</label>
-            <input
-              style={inputStyle}
-              type="text"
-              placeholder="e.g., John Doe"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              required
-            />
-
-            <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Phone Number *</label>
-            <input
-              style={inputStyle}
-              type="tel"
-              placeholder="e.g., 08012345678"
-              value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value)}
-              required
-            />
-
+      <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '500px', margin: '0 auto' }}>
+        {ticket ? (
+          <div style={{ textAlign: 'center', padding: '20px' }}>
+            <div style={{ fontSize: '64px', marginBottom: '20px' }}>✅</div>
+            <h1 style={{ fontSize: '24px', marginBottom: '10px', color: '#0f172a' }}>Payment Successful!</h1>
+            <p style={{ color: '#64748b', marginBottom: '30px' }}>Your rental ticket is ready</p>
+            
             <div style={{ 
               backgroundColor: '#f8fafc', 
-              padding: '15px', 
-              borderRadius: '8px',
-              marginBottom: '20px',
-              textAlign: 'center'
+              padding: '30px', 
+              borderRadius: '12px', 
+              border: '2px dashed #2563eb',
+              marginBottom: '20px'
             }}>
-              <p style={{ margin: '0', fontSize: '14px', color: '#64748b' }}>Total Amount</p>
-              <h2 style={{ margin: '5px 0 0 0', fontSize: '28px', color: '#0f172a' }}>
-                ₦{pricing[duration].toLocaleString()}
+              <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '10px' }}>YOUR TICKET CODE</p>
+              <h2 style={{ 
+                fontSize: '32px', 
+                color: '#2563eb', 
+                margin: '0',
+                fontFamily: 'monospace',
+                letterSpacing: '2px'
+              }}>
+                {ticket}
               </h2>
             </div>
 
+            <div style={{ 
+              backgroundColor: '#fff3cd', 
+              padding: '15px', 
+              borderRadius: '8px',
+              marginBottom: '20px',
+              textAlign: 'left'
+            }}>
+              <h3 style={{ margin: '0 0 10px 0', fontSize: '16px' }}> What's Next?</h3>
+              <ol style={{ margin: 0, paddingLeft: '20px', fontSize: '14px' }}>
+                <li>Show this ticket code to the location staff</li>
+                <li>Staff will scan a power bank and enter your ticket</li>
+                <li>Collect the power bank and enjoy!</li>
+                <li>Return before {duration} hours to avoid extra charges</li>
+              </ol>
+            </div>
+
             <button
-              type="submit"
-              disabled={loading || !paystackLoaded}
+              onClick={() => window.print()}
               style={{
                 width: '100%',
-                padding: '18px',
-                backgroundColor: loading || !paystackLoaded ? '#999' : '#10b981',
+                padding: '15px',
+                backgroundColor: '#2563eb',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
-                fontSize: '18px',
+                fontSize: '16px',
                 fontWeight: 'bold',
-                cursor: loading || !paystackLoaded ? 'not-allowed' : 'pointer'
+                marginBottom: '10px',
+                cursor: 'pointer'
               }}
             >
-              {loading ? 'Processing...' : !paystackLoaded ? 'Loading...' : 'Pay Now with Paystack'}
+              📄 Print / Save Ticket
             </button>
-          </form>
 
-          <div style={{ marginTop: '30px', textAlign: 'center' }}>
-            <a href="/" style={{ color: '#2563eb', textDecoration: 'none' }}>← Back to Home</a>
+            <a href="/" style={{ display: 'block', textAlign: 'center', color: '#2563eb', textDecoration: 'none', marginTop: '10px' }}>
+              ← Back to Home
+            </a>
           </div>
-        </>
-      )}
-    </main>
+        ) : (
+          <>
+            <h1 style={{ fontSize: '24px', marginBottom: '10px' }}> Rent a Power Bank</h1>
+            <p style={{ color: '#64748b', marginBottom: '30px' }}>Fill in your details and pay securely</p>
+
+            {error && (
+              <div style={{ 
+                padding: '15px', 
+                backgroundColor: '#fee2e2', 
+                color: '#b91c1c',
+                borderRadius: '8px',
+                marginBottom: '20px'
+              }}>
+                {error}
+              </div>
+            )}
+
+            {!paystackReady && (
+              <div style={{ 
+                padding: '15px', 
+                backgroundColor: '#fff3cd', 
+                color: '#856404',
+                borderRadius: '8px',
+                marginBottom: '20px',
+                textAlign: 'center'
+              }}>
+                Loading payment system...
+              </div>
+            )}
+
+            <form onSubmit={handlePayment}>
+              <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Select Location *</label>
+              <select
+                style={inputStyle}
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                required
+              >
+                <option value="">-- Choose a location --</option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>{loc.name}</option>
+                ))}
+              </select>
+
+              <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Rental Duration *</label>
+              <select
+                style={inputStyle}
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+              >
+                <option value="6">6 hours - ₦300</option>
+                <option value="12">12 hours - ₦500</option>
+                <option value="24">24 hours - ₦800</option>
+              </select>
+
+              <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Your Name *</label>
+              <input
+                style={inputStyle}
+                type="text"
+                placeholder="e.g., John Doe"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                required
+              />
+
+              <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Phone Number *</label>
+              <input
+                style={inputStyle}
+                type="tel"
+                placeholder="e.g., 08012345678"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                required
+              />
+
+              <div style={{ 
+                backgroundColor: '#f8fafc', 
+                padding: '15px', 
+                borderRadius: '8px',
+                marginBottom: '20px',
+                textAlign: 'center'
+              }}>
+                <p style={{ margin: '0', fontSize: '14px', color: '#64748b' }}>Total Amount</p>
+                <h2 style={{ margin: '5px 0 0 0', fontSize: '28px', color: '#0f172a' }}>
+                  ₦{pricing[duration].toLocaleString()}
+                </h2>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading || !paystackReady}
+                style={{
+                  width: '100%',
+                  padding: '18px',
+                  backgroundColor: loading || !paystackReady ? '#999' : '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  cursor: loading || !paystackReady ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {loading ? 'Processing...' : !paystackReady ? 'Loading...' : 'Pay Now with Paystack'}
+              </button>
+            </form>
+
+            <div style={{ marginTop: '30px', textAlign: 'center' }}>
+              <a href="/" style={{ color: '#2563eb', textDecoration: 'none' }}>← Back to Home</a>
+            </div>
+          </>
+        )}
+      </main>
+    </>
   );
 }
