@@ -29,6 +29,7 @@ function StaffPowerBankContent() {
     if (pb) {
       setPbData(pb);
       if (pb.status === 'rented') {
+        // Find the active rental linked to this power bank
         const { data: rental } = await supabase
           .from('rentals')
           .select('*')
@@ -36,6 +37,8 @@ function StaffPowerBankContent() {
           .eq('status', 'active')
           .single();
         setActiveRental(rental);
+      } else {
+        setActiveRental(null);
       }
     }
     setLoading(false);
@@ -47,7 +50,8 @@ function StaffPowerBankContent() {
       return;
     }
     setLoading(true);
-    
+
+    // Find the paid rental with this ticket
     const { data: rental, error: rentalError } = await supabase
       .from('rentals')
       .select('*')
@@ -61,13 +65,21 @@ function StaffPowerBankContent() {
       return;
     }
 
+    // Update rental: set to active AND link to this power bank
     const { error: updateError } = await supabase
       .from('rentals')
-      .update({ status: 'active', started_at: new Date().toISOString() })
+      .update({
+        status: 'active',
+        started_at: new Date().toISOString(),
+        power_bank_id: pbData.id   // <-- THIS IS THE KEY FIX
+      })
       .eq('id', rental.id);
 
     if (!updateError) {
-      await supabase.from('power_banks').update({ status: 'rented' }).eq('id', pbData.id);
+      await supabase
+        .from('power_banks')
+        .update({ status: 'rented' })
+        .eq('id', pbData.id);
       setMessage('✅ Success! Power bank rented out.');
       setTicketCode('');
       fetchData();
@@ -78,25 +90,41 @@ function StaffPowerBankContent() {
   };
 
   const handleReturn = async () => {
-    if (!activeRental) return;
+    if (!activeRental) {
+      setMessage('No active rental found. Please refresh.');
+      return;
+    }
     setLoading(true);
-    
-    await supabase.from('rentals').update({ 
-      status: 'completed', 
-      ended_at: new Date().toISOString() 
-    }).eq('id', activeRental.id);
-    
-    await supabase.from('power_banks').update({ status: 'available' }).eq('id', pbData.id);
-    
-    setMessage('✅ Success! Power bank returned and is now available.');
-    setActiveRental(null);
-    fetchData();
+
+    const { error: rentalError } = await supabase
+      .from('rentals')
+      .update({
+        status: 'completed',
+        ended_at: new Date().toISOString()
+      })
+      .eq('id', activeRental.id);
+
+    const { error: pbError } = await supabase
+      .from('power_banks')
+      .update({ status: 'available' })
+      .eq('id', pbData.id);
+
+    if (rentalError || pbError) {
+      setMessage(' Error completing return.');
+    } else {
+      setMessage('✅ Success! Power bank returned and is now available.');
+      setActiveRental(null);
+      fetchData();
+    }
     setLoading(false);
   };
 
   const handleStatusChange = async (newStatus: string) => {
     setLoading(true);
-    await supabase.from('power_banks').update({ status: newStatus }).eq('id', pbData.id);
+    await supabase
+      .from('power_banks')
+      .update({ status: newStatus })
+      .eq('id', pbData.id);
     setMessage(`⚠️ Power bank marked as ${newStatus}.`);
     fetchData();
     setLoading(false);
@@ -119,13 +147,13 @@ function StaffPowerBankContent() {
     <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '500px', margin: '0 auto' }}>
       <div style={{ textAlign: 'center', marginBottom: '20px' }}>
         <h1 style={{ fontSize: '32px', margin: '0', color: '#0f172a' }}>{pbCode}</h1>
-        <span style={{ 
-          display: 'inline-block', 
-          marginTop: '10px', 
-          padding: '8px 20px', 
-          borderRadius: '20px', 
-          backgroundColor: getStatusColor(pbData.status), 
-          color: 'white', 
+        <span style={{
+          display: 'inline-block',
+          marginTop: '10px',
+          padding: '8px 20px',
+          borderRadius: '20px',
+          backgroundColor: getStatusColor(pbData.status),
+          color: 'white',
           fontWeight: 'bold',
           textTransform: 'uppercase',
           fontSize: '14px'
@@ -136,9 +164,9 @@ function StaffPowerBankContent() {
       </div>
 
       {message && (
-        <div style={{ 
-          padding: '15px', 
-          borderRadius: '8px', 
+        <div style={{
+          padding: '15px',
+          borderRadius: '8px',
           marginBottom: '20px',
           backgroundColor: message.includes('Success') ? '#dcfce7' : '#fee2e2',
           color: message.includes('Success') ? '#15803d' : '#b91c1c',
@@ -154,12 +182,12 @@ function StaffPowerBankContent() {
           <h3 style={{ marginTop: 0, textAlign: 'center' }}>Rent Out</h3>
           <input
             type="text"
-            placeholder="Enter Customer Ticket (e.g., RNT-123)"
+            placeholder="Enter Customer Ticket (e.g., RNT-BL2UUM)"
             value={ticketCode}
             onChange={(e) => setTicketCode(e.target.value)}
-            style={{ width: '100%', padding: '15px', marginBottom: '15px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '16px', textAlign: 'center', textTransform: 'uppercase' }}
+            style={{ width: '100%', padding: '15px', marginBottom: '15px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '16px', textAlign: 'center', textTransform: 'uppercase', boxSizing: 'border-box' }}
           />
-          <button 
+          <button
             onClick={handleRentOut}
             disabled={loading}
             style={{ width: '100%', padding: '15px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer' }}
@@ -171,26 +199,35 @@ function StaffPowerBankContent() {
 
       {pbData.status === 'rented' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          <button 
+          {activeRental && (
+            <div style={{ padding: '15px', backgroundColor: '#eff6ff', borderRadius: '8px', textAlign: 'center' }}>
+              <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#64748b' }}>Active Rental</p>
+              <p style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#2563eb' }}>{activeRental.ticket_code}</p>
+              <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#64748b' }}>
+                 {activeRental.customer_name || 'Customer'} • {activeRental.duration_hours || '?'} hrs
+              </p>
+            </div>
+          )}
+          <button
             onClick={handleReturn}
             disabled={loading}
             style={{ width: '100%', padding: '18px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer' }}
           >
             ✅ Confirm Return
           </button>
-          <button 
+          <button
             onClick={() => handleStatusChange('damaged')}
             disabled={loading}
             style={{ width: '100%', padding: '15px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}
           >
             ⚠️ Report Damage
           </button>
-          <button 
+          <button
             onClick={() => handleStatusChange('lost')}
             disabled={loading}
             style={{ width: '100%', padding: '15px', backgroundColor: '#f97316', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}
           >
-            🚨 Mark Lost
+             Mark Lost
           </button>
         </div>
       )}
@@ -198,7 +235,7 @@ function StaffPowerBankContent() {
       {(pbData.status === 'damaged' || pbData.status === 'lost') && (
         <div style={{ textAlign: 'center', padding: '20px', backgroundColor: '#fee2e2', borderRadius: '12px', border: '1px solid #fca5a5' }}>
           <p style={{ fontSize: '16px', marginBottom: '15px' }}>This power bank is currently marked as <strong>{pbData.status.toUpperCase()}</strong>.</p>
-          <button 
+          <button
             onClick={() => handleStatusChange('available')}
             disabled={loading}
             style={{ padding: '12px 24px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}
