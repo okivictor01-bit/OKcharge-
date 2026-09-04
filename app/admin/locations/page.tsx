@@ -9,6 +9,7 @@ interface Location {
   address: string;
   owner_name?: string;
   owner_phone?: string;
+  status: string;
   latitude: number | null;
   longitude: number | null;
   created_at: string;
@@ -17,12 +18,15 @@ interface Location {
 export default function LocationsListPage() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLocations();
   }, []);
 
   const fetchLocations = async () => {
+    setLoading(true);
     const { data } = await supabase
       .from('locations')
       .select('*')
@@ -34,6 +38,38 @@ export default function LocationsListPage() {
     setLoading(false);
   };
 
+  const handleSuspend = async (locationId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    const action = newStatus === 'inactive' ? 'suspended' : 'activated';
+    
+    const { error } = await supabase
+      .from('locations')
+      .update({ status: newStatus })
+      .eq('id', locationId);
+
+    if (error) {
+      setMessage('Error: ' + error.message);
+    } else {
+      setMessage(`Location ${action} successfully!`);
+      fetchLocations(); // Refresh the list
+    }
+  };
+
+  const handleDelete = async (locationId: string) => {
+    const { error } = await supabase
+      .from('locations')
+      .delete()
+      .eq('id', locationId);
+
+    if (error) {
+      setMessage('Error: ' + error.message);
+    } else {
+      setMessage('Location deleted successfully!');
+      setConfirmDelete(null);
+      fetchLocations(); // Refresh the list
+    }
+  };
+
   const cardStyle = {
     padding: '20px',
     marginBottom: '15px',
@@ -43,15 +79,26 @@ export default function LocationsListPage() {
     boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
   };
 
-  const badgeStyle = (hasCoords: boolean) => ({
+  const badgeStyle = (status: string) => ({
     display: 'inline-block',
     padding: '4px 12px',
     borderRadius: '20px',
     fontSize: '12px',
     fontWeight: 'bold',
-    backgroundColor: hasCoords ? '#dcfce7' : '#fee2e2',
-    color: hasCoords ? '#15803d' : '#b91c1c'
+    backgroundColor: status === 'active' ? '#dcfce7' : '#fee2e2',
+    color: status === 'active' ? '#15803d' : '#b91c1c'
   });
+
+  const buttonStyle = {
+    padding: '8px 16px',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    cursor: 'pointer' as const,
+    marginRight: '8px',
+    marginBottom: '8px'
+  };
 
   return (
     <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '800px', margin: '0 auto' }}>
@@ -72,6 +119,24 @@ export default function LocationsListPage() {
         </a>
       </div>
 
+      {message && (
+        <div style={{ 
+          padding: '15px', 
+          borderRadius: '8px', 
+          marginBottom: '20px',
+          backgroundColor: message.includes('Error') ? '#fee2e2' : '#dcfce7',
+          color: message.includes('Error') ? '#b91c1c' : '#15803d'
+        }}>
+          {message}
+          <button 
+            onClick={() => setMessage('')}
+            style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px' }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <p>Loading locations...</p>
       ) : locations.length === 0 ? (
@@ -81,11 +146,11 @@ export default function LocationsListPage() {
         </div>
       ) : (
         locations.map((loc) => (
-          <div key={loc.id} style={cardStyle}>
+          <div key={loc.id} style={{ ...cardStyle, opacity: loc.status === 'inactive' ? 0.7 : 1 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
               <h2 style={{ margin: 0, fontSize: '18px', color: '#1f2937' }}>{loc.name}</h2>
-              <span style={badgeStyle(!!loc.latitude && !!loc.longitude)}>
-                {loc.latitude && loc.longitude ? '✓ Has GPS' : '⚠ No GPS'}
+              <span style={badgeStyle(loc.status)}>
+                {loc.status === 'active' ? '✓ Active' : '⚠ Suspended'}
               </span>
             </div>
 
@@ -95,47 +160,64 @@ export default function LocationsListPage() {
               </p>
               {loc.owner_name && (
                 <p style={{ margin: '5px 0', color: '#4b5563', fontSize: '14px' }}>
-                  👤 {loc.owner_name}
+                   {loc.owner_name}
                 </p>
               )}
               {loc.owner_phone && (
                 <p style={{ margin: '5px 0', color: '#4b5563', fontSize: '14px' }}>
-                  📞 {loc.owner_phone}
+                   {loc.owner_phone}
                 </p>
               )}
             </div>
 
-            <div style={{ 
-              borderTop: '1px solid #e5e7eb', 
-              paddingTop: '10px', 
-              marginTop: '10px',
-              display: 'flex',
-              gap: '10px',
-              flexWrap: 'wrap'
-            }}>
-              <a 
-                href={`/admin/powerbanks?location=${loc.id}`}
-                style={{ 
-                  color: '#2563eb', 
-                  textDecoration: 'none',
-                  fontSize: '14px',
-                  fontWeight: '500'
+            {/* Action Buttons */}
+            <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '15px', marginTop: '15px' }}>
+              <button
+                onClick={() => handleSuspend(loc.id, loc.status)}
+                style={{
+                  ...buttonStyle,
+                  backgroundColor: loc.status === 'active' ? '#f59e0b' : '#10b981',
+                  color: 'white'
                 }}
               >
-                View Power Banks →
-              </a>
-              {!loc.latitude && !loc.longitude && (
-                <a 
-                  href={`/admin/edit-coordinates?location=${loc.id}`}
-                  style={{ 
-                    color: '#d97706', 
-                    textDecoration: 'none',
-                    fontSize: '14px',
-                    fontWeight: '500'
+                {loc.status === 'active' ? '⏸ Suspend' : '▶ Activate'}
+              </button>
+
+              {confirmDelete === loc.id ? (
+                <div style={{ display: 'inline-block' }}>
+                  <span style={{ fontSize: '14px', color: '#b91c1c', marginRight: '10px' }}>Are you sure?</span>
+                  <button
+                    onClick={() => handleDelete(loc.id)}
+                    style={{
+                      ...buttonStyle,
+                      backgroundColor: '#ef4444',
+                      color: 'white'
+                    }}
+                  >
+                    Yes, Delete
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(null)}
+                    style={{
+                      ...buttonStyle,
+                      backgroundColor: '#6b7280',
+                      color: 'white'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete(loc.id)}
+                  style={{
+                    ...buttonStyle,
+                    backgroundColor: '#ef4444',
+                    color: 'white'
                   }}
                 >
-                  Add Coordinates →
-                </a>
+                  🗑 Delete
+                </button>
               )}
             </div>
           </div>
@@ -143,7 +225,7 @@ export default function LocationsListPage() {
       )}
 
       <div style={{ marginTop: '30px', textAlign: 'center' }}>
-        <a href="/admin" style={{ color: '#2563eb', textDecoration: 'none' }}>← Back to Admin</a>
+        <a href="/admin/dashboard" style={{ color: '#2563eb', textDecoration: 'none' }}>← Back to Dashboard</a>
       </div>
     </main>
   );
