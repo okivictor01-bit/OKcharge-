@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import './globals.css';
 
 export const metadata: Metadata = {
   title: 'OKcharge Platform',
@@ -16,7 +15,9 @@ export default function RootLayout({
       <head>
         <script src="https://js.paystack.co/v1/inline.js" />
       </head>
-      <body>{children}</body>
+      <body style={{ margin: 0, padding: 0, backgroundColor: '#ffffff' }}>
+        {children}
+      </body>
     </html>
   );
 }
