@@ -47,9 +47,8 @@ export default function AddPowerBankPage() {
     } else {
       setMessage('Success! Power Bank ' + pbCode + ' added.');
       
-      // Automatically generate QR Code
-      // The QR code will contain the URL for the staff to scan
-      const staffUrl = `https://okcharge.pages.dev/staff/pb/${pbCode}`;
+      // Automatically generate QR Code with the correct query parameter URL
+      const staffUrl = `https://okcharge.pages.dev/staff/pb?code=${pbCode}`;
       const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(staffUrl)}`;
       setQrCodeUrl(qrApiUrl);
       
@@ -142,8 +141,8 @@ export default function AddPowerBankPage() {
             alt={`QR Code for ${pbCode}`} 
             style={{ width: '250px', height: '250px', borderRadius: '8px' }} 
           />
-          <p style={{ marginTop: '15px', fontSize: '14px', color: '#64748b' }}>
-            Code: <strong>{pbCode}</strong><br/>
+          <p style={{ marginTop: '15px', fontSize: '14px', color: '#64748b', wordBreak: 'break-all' }}>
+            URL: <strong>{`https://okcharge.pages.dev/staff/pb?code=${pbCode}`}</strong><br/><br/>
             Take a screenshot, print this, and stick it on the power bank!
           </p>
         </div>
