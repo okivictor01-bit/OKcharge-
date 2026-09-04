@@ -1,5 +1,8 @@
-export const metadata = {
-  title: 'OKcharge',
+import type { Metadata } from 'next';
+import './globals.css';
+
+export const metadata: Metadata = {
+  title: 'OKcharge Platform',
   description: 'Power Bank Rental Platform',
 };
 
@@ -10,9 +13,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, fontFamily: 'sans-serif' }}>
-        {children}
-      </body>
+      <head>
+        <script src="https://js.paystack.co/v1/inline.js" />
+      </head>
+      <body>{children}</body>
     </html>
   );
 }
