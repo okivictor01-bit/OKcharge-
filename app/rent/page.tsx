@@ -19,11 +19,10 @@ export default function RentPage() {
   const [ticket, setTicket] = useState('');
   const [error, setError] = useState('');
 
-  // Pricing (you can customize this per location later)
-  const pricing = {
-    '6': 300,    // 6 hours = ₦300
-    '12': 500,   // 12 hours = ₦500
-    '24': 800,   // 24 hours = 800
+  const pricing: Record<string, number> = {
+    '6': 300,
+    '12': 500,
+    '24': 800,
   };
 
   useEffect(() => {
@@ -48,6 +47,20 @@ export default function RentPage() {
     return result;
   };
 
+  const loadPaystackScript = (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if ((window as any).PaystackPop) {
+        resolve();
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://js.paystack.co/v1/inline.js';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load Paystack'));
+      document.body.appendChild(script);
+    });
+  };
+
   const handlePayment = async (e: any) => {
     e.preventDefault();
     
@@ -63,58 +76,63 @@ export default function RentPage() {
     setLoading(true);
     setError('');
 
-    const amount = pricing[duration as keyof typeof pricing] * 100; // Convert to kobo
+    const amount = pricing[duration] * 100;
     const ticketCode = generateTicketCode();
-    const email = `${customerPhone.replace(/\s/g, '')}@okcharge.ng`; // Generate email from phone
+    const email = `${customerPhone.replace(/\s/g, '')}@okcharge.ng`;
 
-    // Initialize Paystack
-    const handler = (window as any).PaystackPop.setup({
-      key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
-      email: email,
-      amount: amount,
-      currency: 'NGN',
-      ref: ticketCode,
-      metadata: {
-        custom_fields: [
-          { display_name: 'Customer Name', variable_name: 'customer_name', value: customerName },
-          { display_name: 'Customer Phone', variable_name: 'customer_phone', value: customerPhone },
-          { display_name: 'Location ID', variable_name: 'location_id', value: selectedLocation },
-          { display_name: 'Duration', variable_name: 'duration', value: duration },
-          { display_name: 'Ticket Code', variable_name: 'ticket_code', value: ticketCode }
-        ]
-      },
-      callback: async (response: any) => {
-        // Payment successful - save to database
-        const { error } = await supabase
-          .from('rentals')
-          .insert([
-            {
-              ticket_code: ticketCode,
-              location_id: selectedLocation,
-              customer_name: customerName,
-              customer_phone: customerPhone,
-              duration_hours: parseInt(duration),
-              amount_paid: pricing[duration as keyof typeof pricing],
-              status: 'paid',
-              paystack_reference: response.reference,
-              created_at: new Date().toISOString()
-            }
-          ]);
+    try {
+      await loadPaystackScript();
 
-        if (error) {
-          setError('Error saving rental: ' + error.message);
-        } else {
-          setTicket(ticketCode);
+      const handler = (window as any).PaystackPop.setup({
+        key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+        email: email,
+        amount: amount,
+        currency: 'NGN',
+        ref: ticketCode,
+        metadata: {
+          custom_fields: [
+            { display_name: 'Customer Name', variable_name: 'customer_name', value: customerName },
+            { display_name: 'Customer Phone', variable_name: 'customer_phone', value: customerPhone },
+            { display_name: 'Location ID', variable_name: 'location_id', value: selectedLocation },
+            { display_name: 'Duration', variable_name: 'duration', value: duration },
+            { display_name: 'Ticket Code', variable_name: 'ticket_code', value: ticketCode }
+          ]
+        },
+        callback: async (response: any) => {
+          const { error } = await supabase
+            .from('rentals')
+            .insert([
+              {
+                ticket_code: ticketCode,
+                location_id: selectedLocation,
+                customer_name: customerName,
+                customer_phone: customerPhone,
+                duration_hours: parseInt(duration),
+                amount_paid: pricing[duration],
+                status: 'paid',
+                paystack_reference: response.reference,
+                created_at: new Date().toISOString()
+              }
+            ]);
+
+          if (error) {
+            setError('Error saving rental: ' + error.message);
+          } else {
+            setTicket(ticketCode);
+          }
+          setLoading(false);
+        },
+        onClose: () => {
+          setError('Payment window closed');
+          setLoading(false);
         }
-        setLoading(false);
-      },
-      onClose: () => {
-        setError('Payment window closed');
-        setLoading(false);
-      }
-    });
+      });
 
-    handler.openIframe();
+      handler.openIframe();
+    } catch (err) {
+      setError('Failed to load payment system. Please refresh and try again.');
+      setLoading(false);
+    }
   };
 
   const inputStyle = {
@@ -130,15 +148,8 @@ export default function RentPage() {
   return (
     <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '500px', margin: '0 auto' }}>
       {ticket ? (
-        // TICKET SUCCESS PAGE
         <div style={{ textAlign: 'center', padding: '20px' }}>
-          <div style={{ 
-            fontSize: '64px', 
-            marginBottom: '20px',
-            animation: 'bounce 1s infinite'
-          }}>
-            ✅
-          </div>
+          <div style={{ fontSize: '64px', marginBottom: '20px' }}>✅</div>
           <h1 style={{ fontSize: '24px', marginBottom: '10px', color: '#0f172a' }}>Payment Successful!</h1>
           <p style={{ color: '#64748b', marginBottom: '30px' }}>Your rental ticket is ready</p>
           
@@ -195,21 +206,11 @@ export default function RentPage() {
             📄 Print / Save Ticket
           </button>
 
-          <a 
-            href="/" 
-            style={{ 
-              display: 'block', 
-              textAlign: 'center', 
-              color: '#2563eb',
-              textDecoration: 'none',
-              marginTop: '10px'
-            }}
-          >
+          <a href="/" style={{ display: 'block', textAlign: 'center', color: '#2563eb', textDecoration: 'none', marginTop: '10px' }}>
             ← Back to Home
           </a>
         </div>
       ) : (
-        // RENTAL FORM
         <>
           <h1 style={{ fontSize: '24px', marginBottom: '10px' }}> Rent a Power Bank</h1>
           <p style={{ color: '#64748b', marginBottom: '30px' }}>Fill in your details and pay securely</p>
@@ -263,54 +264,4 @@ export default function RentPage() {
 
             <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Phone Number *</label>
             <input
-              style={inputStyle}
-              type="tel"
-              placeholder="e.g., 08012345678"
-              value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value)}
-              required
-            />
-
-            <div style={{ 
-              backgroundColor: '#f8fafc', 
-              padding: '15px', 
-              borderRadius: '8px',
-              marginBottom: '20px',
-              textAlign: 'center'
-            }}>
-              <p style={{ margin: '0', fontSize: '14px', color: '#64748b' }}>Total Amount</p>
-              <h2 style={{ margin: '5px 0 0 0', fontSize: '28px', color: '#0f172a' }}>
-                ₦{pricing[duration as keyof typeof pricing].toLocaleString()}
-              </h2>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '18px',
-                backgroundColor: loading ? '#999' : '#10b981',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '18px',
-                fontWeight: 'bold',
-                cursor: loading ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {loading ? 'Processing...' : 'Pay Now with Paystack'}
-            </button>
-          </form>
-
-          <div style={{ marginTop: '30px', textAlign: 'center' }}>
-            <a href="/" style={{ color: '#2563eb', textDecoration: 'none' }}>← Back to Home</a>
-          </div>
-        </>
-      )}
-
-      {/* Paystack Script */}
-      <script src="https://js.paystack.co/v1/inline.js"></script>
-    </main>
-  );
-}
+              style
