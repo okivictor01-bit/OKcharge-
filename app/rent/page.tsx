@@ -13,7 +13,7 @@ interface Location {
 export default function RentPage() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState('');
-  const [duration, setDuration] = useState('6');
+  const [duration, setDuration] = useState('1'); // Changed default to 1 hour
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,7 +21,9 @@ export default function RentPage() {
   const [error, setError] = useState('');
   const [paystackReady, setPaystackReady] = useState(false);
 
+  // UPDATED PRICING
   const pricing: Record<string, number> = {
+    '1': 100,
     '6': 300,
     '12': 500,
     '24': 800,
@@ -68,7 +70,6 @@ export default function RentPage() {
     const ticketCode = generateTicketCode();
     const email = `${customerPhone.replace(/\s/g, '')}@okcharge.ng`;
 
-    // Use PaystackPop directly
     const handler = (window as any).PaystackPop.setup({
       key: 'pk_live_9dd06423b57f6a6f6927e3ea2e28a101baa01fba',
       email: email,
@@ -129,7 +130,6 @@ export default function RentPage() {
 
   return (
     <>
-      {/* Load Paystack script using Next.js Script component */}
       <Script 
         src="https://js.paystack.co/v1/inline.js" 
         strategy="afterInteractive"
@@ -257,6 +257,7 @@ export default function RentPage() {
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
               >
+                <option value="1">1 hour - ₦100</option>
                 <option value="6">6 hours - ₦300</option>
                 <option value="12">12 hours - ₦500</option>
                 <option value="24">24 hours - ₦800</option>
