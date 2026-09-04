@@ -136,11 +136,13 @@ export default function MapPage() {
 
           locationsWithCoords.forEach((loc) => {
             const marker = L.marker([loc.latitude!, loc.longitude!]).addTo(map);
+            
+            // FIXED: Added $ before {loc.phone ? ...}
             const popupContent = `
               <div style="min-width: 150px;">
                 <h3 style="margin: 0 0 5px 0; font-size: 14px; font-weight: bold;">${loc.name}</h3>
                 <p style="margin: 0; font-size: 12px; color: #666;">${loc.address}</p>
-                {loc.phone ? `<p style="margin: 5px 0 0 0; font-size: 12px;">📞 ${loc.phone}</p>` : ''}
+                ${loc.phone ? `<p style="margin: 5px 0 0 0; font-size: 12px;">📞 ${loc.phone}</p>` : ''}
               </div>
             `;
             marker.bindPopup(popupContent);
