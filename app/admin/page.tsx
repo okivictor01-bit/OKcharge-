@@ -4,39 +4,70 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export default function AdminPage() {
-  const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
-  const [ownerName, setOwnerName] = useState('');
-  const [ownerPhone, setOwnerPhone] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    address: '',
+    city: 'Akure', // Default city
+    owner_name: '',
+    owner_phone: ''
+  });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+
+  const cities = [
+    'Akure', 'Lagos', 'Ibadan', 'Abeokuta', 
+    'Osogbo', 'Ado-Ekiti', 'Ilorin', 'Ogbomoso', 'Ijebu-Ode'
+  ];
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
 
+    let lat = null;
+    let lng = null;
+
+    // 1. Try to automatically find coordinates
+    try {
+      const searchQuery = `${formData.address}, ${formData.city}, Nigeria`;
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`
+      );
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        lat = parseFloat(data[0].lat);
+        lng = parseFloat(data[0].lon);
+      }
+    } catch (error) {
+      console.error('Geocoding error:', error);
+    }
+
+    // 2. Save to database
     const { error } = await supabase
       .from('locations')
       .insert([
         {
-          name: name,
-          address: address,
-          owner_name: ownerName,
-          owner_phone: ownerPhone,
+          name: formData.name,
+          address: formData.address,
+          owner_name: formData.owner_name,
+          owner_phone: formData.owner_phone,
           status: 'active',
-          is_visible_on_map: true
+          is_visible_on_map: true,
+          latitude: lat,
+          longitude: lng
         }
       ]);
 
     if (error) {
       setMessage('Error: ' + error.message);
     } else {
-      setMessage('Success! Location added.');
-      setName('');
-      setAddress('');
-      setOwnerName('');
-      setOwnerPhone('');
+      if (lat && lng) {
+        setMessage('Success! Location added with GPS coordinates.');
+      } else {
+        setMessage('Location added, but coordinates not found. You can add them manually later.');
+      }
+      setFormData({ name: '', address: '', city: 'Akure', owner_name: '', owner_phone: '' });
     }
     setLoading(false);
   };
@@ -73,28 +104,39 @@ export default function AdminPage() {
           style={inputStyle}
           type="text"
           placeholder="e.g., ABC Lounge"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          value={formData.name}
+          onChange={(e) => setFormData({...formData, name: e.target.value})}
           required
         />
 
-        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Address *</label>
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Street Address *</label>
         <input
           style={inputStyle}
           type="text"
-          placeholder="e.g., 123 Main St, Akure"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
+          placeholder="e.g., 89, Oluwatuyi, Ijoka Road"
+          value={formData.address}
+          onChange={(e) => setFormData({...formData, address: e.target.value})}
           required
         />
+
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>City *</label>
+        <select
+          style={inputStyle}
+          value={formData.city}
+          onChange={(e) => setFormData({...formData, city: e.target.value})}
+        >
+          {cities.map((city) => (
+            <option key={city} value={city}>{city}</option>
+          ))}
+        </select>
 
         <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Owner Name</label>
         <input
           style={inputStyle}
           type="text"
           placeholder="e.g., John Doe"
-          value={ownerName}
-          onChange={(e) => setOwnerName(e.target.value)}
+          value={formData.owner_name}
+          onChange={(e) => setFormData({...formData, owner_name: e.target.value})}
         />
 
         <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Owner Phone</label>
@@ -102,8 +144,8 @@ export default function AdminPage() {
           style={inputStyle}
           type="tel"
           placeholder="e.g., 08012345678"
-          value={ownerPhone}
-          onChange={(e) => setOwnerPhone(e.target.value)}
+          value={formData.owner_phone}
+          onChange={(e) => setFormData({...formData, owner_phone: e.target.value})}
         />
 
         <button
@@ -117,11 +159,10 @@ export default function AdminPage() {
             border: 'none',
             borderRadius: '8px',
             fontSize: '18px',
-            fontWeight: 'bold',
-            cursor: loading ? 'not-allowed' : 'pointer'
+            fontWeight: 'bold'
           }}
         >
-          {loading ? 'Saving...' : 'Save Location'}
+          {loading ? 'Finding Coordinates & Saving...' : 'Save Location'}
         </button>
       </form>
 
