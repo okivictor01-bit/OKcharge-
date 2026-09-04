@@ -14,9 +14,22 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
+  // Comprehensive list of Southwest Nigeria towns
   const cities = [
-    'Akure', 'Lagos', 'Ibadan', 'Abeokuta', 
-    'Osogbo', 'Ado-Ekiti', 'Ilorin', 'Ogbomoso', 'Ijebu-Ode'
+    // Ondo State
+    'Akure', 'Ore', 'Okitipupa', 'Ondo', 'Owo', 'Ikare-Akoko', 'Oka-Akoko', 'Idanre', 'Ifon', 'Ode-Irele', 'Igbokoda', 'Ayetoro', 'Araromi', 'Ijebu-Igbo',
+    // Lagos State
+    'Lagos', 'Ikeja', 'Epe', 'Ikorodu', 'Badagry', 'Lekki', 'Surulere', 'Yaba', 'Mushin', 'Oshodi', 'Agege', 'Alimosho',
+    // Oyo State
+    'Ibadan', 'Ogbomoso', 'Oyo', 'Iseyin', 'Saki', 'Igboho', 'Eruwa', 'Kishi', 'Igbeti', 'Lalupon', 'Moniya', 'Bodija', 'Ring Road', 'Dugbe', 'Challenge', 'Iwo',
+    // Osun State
+    'Osogbo', 'Ilesa', 'Ife', 'Ede', 'Iwo', 'Ila-Orangun', 'Oke-Ila', 'Ikirun', 'Iragbiji', 'Modakeke', 'Ejigbo', 'Ikire', 'Inisa', 'Ipetumodu',
+    // Ogun State
+    'Abeokuta', 'Ijebu-Ode', 'Sagamu', 'Ota', 'Ijebu-Igbo', 'Ilaro', 'Ago-Iwoye', 'Owode', 'Odeda', 'Iperu', 'Remo', 'Isheri',
+    // Ekiti State
+    'Ado-Ekiti', 'Ikere-Ekiti', 'Emure-Ekiti', 'Omuo-Ekiti', 'Ijero-Ekiti', 'Aramoko-Ekiti', 'Ise-Ekiti', 'Oye-Ekiti', 'Ilupeju-Ekiti',
+    // Kwara State
+    'Ilorin', 'Offa', 'Omu-Aran', 'Lafiagi', 'Patigi', 'Jebba', 'Kaiama', 'Share', 'Omu-Aran'
   ];
 
   const handleSubmit = async (e: any) => {
@@ -113,13 +126,13 @@ export default function AdminPage() {
         <input
           style={inputStyle}
           type="text"
-          placeholder="e.g., 89, Oluwatuyi, Ijoka Road"
+          placeholder="e.g., 167, old ore-benin road"
           value={formData.address}
           onChange={(e) => setFormData({...formData, address: e.target.value})}
           required
         />
 
-        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>City *</label>
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>City / Town *</label>
         <select
           style={inputStyle}
           value={formData.city}
