@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { business_name, bank_name, account_number, percentage } = body;
+    const { business_name, bank_code, account_number, percentage } = body;
 
-    if (!business_name || !bank_name || !account_number) {
+    if (!business_name || !bank_code || !account_number) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -18,11 +18,9 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         business_name: business_name,
-        settlement_bank: bank_name, // Note: Paystack usually requires the bank code, but for now we'll use name. We might need a bank list API later.
+        settlement_bank: bank_code, // Paystack requires the bank code (e.g., "044" for Access Bank)
         account_number: account_number,
-        percentage_charge: percentage * 100, // Paystack expects percentage in basis points (e.g., 30% = 3000? No, 30% = 30. Wait, Paystack uses percentage directly for subaccounts, e.g., 30 for 30%)
-        // Actually, Paystack subaccount percentage is just the number (e.g., 30 for 30%)
-        percentage_charge: percentage 
+        percentage_charge: percentage // Paystack expects a number between 0 and 100 (e.g., 30 for 30%)
       })
     });
 
@@ -37,7 +35,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: data.message || 'Failed to create subaccount' }, { status: 400 });
     }
 
-  } catch (error) {
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ error: 'Internal Server Error: ' + error.message }, { status: 500 });
   }
 }
