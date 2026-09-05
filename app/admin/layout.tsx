@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-// ⚠️ CRITICAL: REPLACE THIS WITH YOUR ACTUAL ADMIN EMAIL ADDRESS
-const ADMIN_EMAIL = 'your_admin_email@example.com'; 
+// Your actual admin email address
+const ADMIN_EMAIL = 'tvicglobal@gmail.com'; 
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
