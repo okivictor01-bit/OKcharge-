@@ -16,7 +16,7 @@ interface Owner {
 interface Location {
   id: string;
   name: string;
-  address: string; // <-- Added this to fix the TypeScript error
+  address: string;
   owner_id: string | null;
 }
 
@@ -27,6 +27,10 @@ export default function ManageOwnersPage() {
   const [message, setMessage] = useState('');
   const [selectedOwnerId, setSelectedOwnerId] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState('');
+  
+  // New states for editing revenue share
+  const [editingShareId, setEditingShareId] = useState<string | null>(null);
+  const [tempShare, setTempShare] = useState<number>(30);
 
   useEffect(() => {
     fetchData();
@@ -35,13 +39,11 @@ export default function ManageOwnersPage() {
   const fetchData = async () => {
     setLoading(true);
     
-    // Fetch all owners
     const { data: ownersData } = await supabase
       .from('location_owners')
       .select('*')
       .order('created_at', { ascending: false });
     
-    // Fetch all locations
     const { data: locationsData } = await supabase
       .from('locations')
       .select('id, name, address, owner_id');
@@ -63,6 +65,26 @@ export default function ManageOwnersPage() {
       setMessage('Error: ' + error.message);
     } else {
       setMessage(`Owner ${newStatus === 'approved' ? 'approved' : 'set to pending'} successfully!`);
+      fetchData();
+    }
+  };
+
+  const handleUpdateRevenueShare = async (ownerId: string) => {
+    if (tempShare < 0 || tempShare > 100) {
+      setMessage('Revenue share must be between 0 and 100');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('location_owners')
+      .update({ revenue_share_percentage: tempShare })
+      .eq('id', ownerId);
+
+    if (error) {
+      setMessage('Error: ' + error.message);
+    } else {
+      setMessage('Revenue share updated successfully!');
+      setEditingShareId(null);
       fetchData();
     }
   };
@@ -114,8 +136,8 @@ export default function ManageOwnersPage() {
           padding: '15px', 
           borderRadius: '8px', 
           marginBottom: '20px',
-          backgroundColor: message.includes('Error') ? '#fee2e2' : '#dcfce7',
-          color: message.includes('Error') ? '#b91c1c' : '#15803d'
+          backgroundColor: message.includes('Error') || message.includes('must be') ? '#fee2e2' : '#dcfce7',
+          color: message.includes('Error') || message.includes('must be') ? '#b91c1c' : '#15803d'
         }}>
           {message}
           <button onClick={() => setMessage('')} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
@@ -170,6 +192,7 @@ export default function ManageOwnersPage() {
       ) : (
         owners.map(owner => {
           const ownerLocations = locations.filter(loc => loc.owner_id === owner.id);
+          const isEditingShare = editingShareId === owner.id;
           
           return (
             <div key={owner.id} style={{ 
@@ -185,9 +208,48 @@ export default function ManageOwnersPage() {
                   <h3 style={{ margin: '0 0 5px 0', fontSize: '18px' }}>{owner.business_name}</h3>
                   <p style={{ margin: '3px 0', fontSize: '14px', color: '#64748b' }}>📞 {owner.phone}</p>
                   <p style={{ margin: '3px 0', fontSize: '14px', color: '#64748b' }}>📧 {owner.email}</p>
-                  <p style={{ margin: '3px 0', fontSize: '14px', color: '#64748b' }}>
-                    💰 Revenue Share: {owner.revenue_share_percentage}%
-                  </p>
+                  
+                  {/* Revenue Share Display / Edit */}
+                  <div style={{ margin: '8px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {isEditingShare ? (
+                      <>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={tempShare}
+                          onChange={(e) => setTempShare(parseInt(e.target.value) || 0)}
+                          style={{ width: '70px', padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                        />
+                        <span style={{ fontSize: '14px', color: '#64748b' }}>% Share</span>
+                        <button
+                          onClick={() => handleUpdateRevenueShare(owner.id)}
+                          style={{ padding: '6px 12px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => { setEditingShareId(null); setTempShare(owner.revenue_share_percentage); }}
+                          style={{ padding: '6px 12px', backgroundColor: '#6b7280', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ fontSize: '14px', color: '#64748b' }}>
+                          💰 Revenue Share: <strong>{owner.revenue_share_percentage}%</strong>
+                        </span>
+                        <button
+                          onClick={() => { setEditingShareId(owner.id); setTempShare(owner.revenue_share_percentage); }}
+                          style={{ padding: '4px 8px', backgroundColor: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+                        >
+                          Edit
+                        </button>
+                      </>
+                    )}
+                  </div>
+
                   <p style={{ margin: '3px 0', fontSize: '12px', color: '#94a3b8' }}>
                     Registered: {formatDate(owner.created_at)}
                   </p>
