@@ -32,6 +32,7 @@ export default function OwnerDashboard() {
 
   const [timeLeft, setTimeLeft] = useState<Record<string, { h: number; m: number; s: number; overdue: boolean }>>({});
 
+  // ✅ CORRECTED BANK CODES FOR PAYSTACK
   const banks = [
     { code: '044', name: 'Access Bank' },
     { code: '058', name: 'GTBank' },
@@ -41,9 +42,17 @@ export default function OwnerDashboard() {
     { code: '070', name: 'Fidelity Bank' },
     { code: '032', name: 'Union Bank' },
     { code: '232', name: 'Sterling Bank' },
-    { code: '090267', name: 'Opay' },
+    { code: '090267', name: 'Opay' }, 
+    { code: '999992', name: 'Opay Digital' }, 
     { code: '090288', name: 'PalmPay' },
-    { code: '090', name: 'Kuda Bank' },
+    { code: '50211', name: 'Kuda Bank' }, 
+    { code: '082', name: 'Keystone Bank' },
+    { code: '050', name: 'Ecobank' },
+    { code: '076', name: 'Polaris Bank' },
+    { code: '214', name: 'FCMB' },
+    { code: '030', name: 'Heritage Bank' },
+    { code: '035', name: 'Wema Bank' },
+    { code: '101', name: 'Providus Bank' },
   ];
 
   useEffect(() => { checkUserAndFetchData(); }, []);
@@ -148,7 +157,7 @@ export default function OwnerDashboard() {
         
         if (!error) {
           setBankMessage('✅ Bank details updated successfully! Payouts will go to this account.');
-          // FIXED: Added explicit type annotation for 'prev'
+          // ✅ FIXED: Explicit type annotation for 'prev'
           setOwner((prev: any) => ({ 
             ...prev, 
             bank_name: banks.find(b=>b.code===tempBankCode)?.name, 
@@ -199,7 +208,7 @@ export default function OwnerDashboard() {
         <p style={{margin:'0 0 10px',fontSize:'14px',opacity:0.9}}>{getFilterLabel()}</p>
         <p style={{margin:'0 0 5px',fontSize:'12px',opacity:0.9}}>({owner.revenue_share_percentage}% Share)</p>
         <h2 style={{margin:'0 0 10px',fontSize:'36px',fontWeight:'bold'}}>₦{periodStats.share.toLocaleString()}</h2>
-        <p style={{margin:0,fontSize:'14px',opacity:0.9}}>Total Location Revenue: {periodStats.revenue.toLocaleString()}</p>
+        <p style={{margin:0,fontSize:'14px',opacity:0.9}}>Total Location Revenue: ₦{periodStats.revenue.toLocaleString()}</p>
       </div>
 
       {/* Bank Details Section */}
