@@ -32,7 +32,7 @@ export default function OwnerDashboard() {
 
   const [timeLeft, setTimeLeft] = useState<Record<string, { h: number; m: number; s: number; overdue: boolean }>>({});
 
-  // ✅ CORRECTED BANK CODES FOR PAYSTACK
+  // ✅ CORRECTED BANK CODES FOR PAYSTACK SUBACCOUNTS
   const banks = [
     { code: '044', name: 'Access Bank' },
     { code: '058', name: 'GTBank' },
@@ -131,6 +131,7 @@ export default function OwnerDashboard() {
   const handleGoToPB = () => { if (scanCode) window.location.href = `/staff/pb?code=${scanCode}`; };
   const handleLogout = async () => { await supabase.auth.signOut(); router.push('/auth/login'); };
 
+  // ✅ UPDATED: Graceful Fallback for Bank Verification
   const handleUpdateBank = async () => {
     if (!tempBankCode || !tempAccountNumber || tempAccountNumber.length !== 10) {
       setBankMessage('❌ Please select a valid bank and enter a 10-digit account number.');
@@ -144,32 +145,51 @@ export default function OwnerDashboard() {
       const res = await fetch(`${supabaseUrl}/functions/v1/create-paystack-subaccount`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ business_name: owner.business_name, bank_code: tempBankCode, account_number: tempAccountNumber, percentage: owner.revenue_share_percentage })
+        body: JSON.stringify({ 
+          business_name: owner.business_name, 
+          bank_code: tempBankCode, 
+          account_number: tempAccountNumber, 
+          percentage: owner.revenue_share_percentage 
+        })
       });
       const data = await res.json();
 
+      let subaccountCode = null;
+      let isSuccess = false;
+
       if (data.success && data.subaccount_code) {
-        const { error } = await supabase.from('location_owners').update({ 
+        subaccountCode = data.subaccount_code;
+        isSuccess = true;
+        setBankMessage('✅ Bank verified & linked to Paystack!');
+      } else {
+        // FALLBACK: Save the bank details anyway, but warn the user
+        console.warn("Paystack verification failed:", data);
+        setBankMessage('⚠️ Bank details saved locally. Paystack verification pending (manual review may be required).');
+        isSuccess = true; // We still consider it a success for saving to DB
+      }
+
+      // ALWAYS save to database if validation passed
+      const { error } = await supabase.from('location_owners').update({ 
+        bank_name: banks.find(b=>b.code===tempBankCode)?.name, 
+        account_number: tempAccountNumber, 
+        paystack_subaccount_code: subaccountCode 
+      }).eq('id', owner.id);
+      
+      if (!error && isSuccess) {
+        setOwner((prev: any) => ({ 
+          ...prev, 
           bank_name: banks.find(b=>b.code===tempBankCode)?.name, 
           account_number: tempAccountNumber, 
-          paystack_subaccount_code: data.subaccount_code 
-        }).eq('id', owner.id);
-        
-        if (!error) {
-          setBankMessage('✅ Bank details updated successfully! Payouts will go to this account.');
-          // ✅ FIXED: Explicit type annotation for 'prev'
-          setOwner((prev: any) => ({ 
-            ...prev, 
-            bank_name: banks.find(b=>b.code===tempBankCode)?.name, 
-            account_number: tempAccountNumber, 
-            paystack_subaccount_code: data.subaccount_code 
-          }));
-          setIsEditingBank(false);
-        } else { setBankMessage('❌ Database error: ' + error.message); }
-      } else {
-        setBankMessage('❌ Bank verification failed: ' + (data.error || 'Invalid account'));
+          paystack_subaccount_code: subaccountCode 
+        }));
+        setIsEditingBank(false);
+      } else if (error) {
+        setBankMessage('❌ Database error: ' + error.message);
       }
-    } catch (err: any) { setBankMessage(' Network error: ' + err.message); }
+
+    } catch (err: any) { 
+      setBankMessage(' Network error: ' + err.message); 
+    }
     setBankSaving(false);
   };
 
@@ -196,8 +216,8 @@ export default function OwnerDashboard() {
         <div style={{display:'grid',gap:'10px',marginBottom:'25px'}}>
           {activeRentals.map((r:any)=>{const t=timeLeft[r.id]||{h:0,m:0,s:0,overdue:false};return(
             <div key={r.id} style={{padding:'15px',backgroundColor:t.overdue?'#fef2f2':'#eff6ff',border:`1px solid ${t.overdue?'#fca5a5':'#bfdbfe'}`,borderRadius:'8px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <div><p style={{margin:0,fontWeight:'bold',fontSize:'16px',color:'#1e3a8a'}}> {r.power_banks?.pb_code||'Unknown'}</p><p style={{margin:'5px 0 0',fontSize:'12px',color:'#64748b'}}>Ticket: {r.ticket_code} • {r.customer_name||'Customer'}</p></div>
-              <div style={{textAlign:'right'}}><p style={{margin:0,fontSize:'12px',color:t.overdue?'#b91c1c':'#1d4ed8',fontWeight:'bold'}}>{t.overdue?'️ OVERDUE':'Time Left'}</p><p style={{margin:'5px 0 0',fontSize:'20px',fontWeight:'bold',fontFamily:'monospace',color:t.overdue?'#b91c1c':'#0f172a'}}>{String(t.h).padStart(2,'0')}:{String(t.m).padStart(2,'0')}:{String(t.s).padStart(2,'0')}</p></div>
+              <div><p style={{margin:0,fontWeight:'bold',fontSize:'16px',color:'#1e3a8a'}}>🔋 {r.power_banks?.pb_code||'Unknown'}</p><p style={{margin:'5px 0 0',fontSize:'12px',color:'#64748b'}}>Ticket: {r.ticket_code} • {r.customer_name||'Customer'}</p></div>
+              <div style={{textAlign:'right'}}><p style={{margin:0,fontSize:'12px',color:t.overdue?'#b91c1c':'#1d4ed8',fontWeight:'bold'}}>{t.overdue?'⚠️ OVERDUE':'Time Left'}</p><p style={{margin:'5px 0 0',fontSize:'20px',fontWeight:'bold',fontFamily:'monospace',color:t.overdue?'#b91c1c':'#0f172a'}}>{String(t.h).padStart(2,'0')}:{String(t.m).padStart(2,'0')}:{String(t.s).padStart(2,'0')}</p></div>
             </div>
           )})}
         </div>
@@ -214,14 +234,14 @@ export default function OwnerDashboard() {
       {/* Bank Details Section */}
       <div style={{backgroundColor:'#f8fafc',padding:'20px',borderRadius:'12px',border:'1px solid #e2e8f0',marginBottom:'25px'}}>
         <h3 style={{marginTop:0,marginBottom:'10px'}}>💳 Bank Account Details</h3>
-        {bankMessage && <div style={{padding:'10px',borderRadius:'6px',marginBottom:'15px',backgroundColor:bankMessage.includes('✅')?'#dcfce7':'#fee2e2',color:bankMessage.includes('✅')?'#15803d':'#b91c1c',fontSize:'14px'}}>{bankMessage}</div>}
+        {bankMessage && <div style={{padding:'10px',borderRadius:'6px',marginBottom:'15px',backgroundColor:bankMessage.includes('✅')?'#dcfce7':bankMessage.includes('⚠️')?'#fef3c7':'#fee2e2',color:bankMessage.includes('✅')?'#15803d':bankMessage.includes('⚠️')?'#92400e':'#b91c1c',fontSize:'14px'}}>{bankMessage}</div>}
         
         {!isEditingBank ? (
           <div>
             <p style={{margin:'5px 0',fontSize:'14px',color:'#64748b'}}><strong>Bank:</strong> {owner.bank_name || 'Not set'}</p>
             <p style={{margin:'5px 0',fontSize:'14px',color:'#64748b'}}><strong>Account:</strong> {owner.account_number ? `****${owner.account_number.slice(-4)}` : 'Not set'}</p>
             <p style={{margin:'5px 0',fontSize:'12px',color:'#94a3b8'}}>Subaccount Code: {owner.paystack_subaccount_code ? `${owner.paystack_subaccount_code.slice(0,8)}...` : 'Not created yet'}</p>
-            <button onClick={()=>setIsEditingBank(true)} style={{marginTop:'10px',padding:'10px 20px',backgroundColor:'#2563eb',color:'white',border:'none',borderRadius:'6px',fontWeight:'bold',cursor:'pointer'}}>✏️ Update Bank Details</button>
+            <button onClick={()=>setIsEditingBank(true)} style={{marginTop:'10px',padding:'10px 20px',backgroundColor:'#2563eb',color:'white',border:'none',borderRadius:'6px',fontWeight:'bold',cursor:'pointer'}}>️ Update Bank Details</button>
           </div>
         ) : (
           <div>
