@@ -140,10 +140,21 @@ export default function OwnerDashboard() {
       const data = await res.json();
 
       if (data.success && data.subaccount_code) {
-        const { error } = await supabase.from('location_owners').update({ bank_name: banks.find(b=>b.code===tempBankCode)?.name, account_number: tempAccountNumber, paystack_subaccount_code: data.subaccount_code }).eq('id', owner.id);
+        const { error } = await supabase.from('location_owners').update({ 
+          bank_name: banks.find(b=>b.code===tempBankCode)?.name, 
+          account_number: tempAccountNumber, 
+          paystack_subaccount_code: data.subaccount_code 
+        }).eq('id', owner.id);
+        
         if (!error) {
           setBankMessage('✅ Bank details updated successfully! Payouts will go to this account.');
-          setOwner(prev => ({ ...prev, bank_name: banks.find(b=>b.code===tempBankCode)?.name, account_number: tempAccountNumber, paystack_subaccount_code: data.subaccount_code }));
+          // FIXED: Added explicit type annotation for 'prev'
+          setOwner((prev: any) => ({ 
+            ...prev, 
+            bank_name: banks.find(b=>b.code===tempBankCode)?.name, 
+            account_number: tempAccountNumber, 
+            paystack_subaccount_code: data.subaccount_code 
+          }));
           setIsEditingBank(false);
         } else { setBankMessage('❌ Database error: ' + error.message); }
       } else {
@@ -176,8 +187,8 @@ export default function OwnerDashboard() {
         <div style={{display:'grid',gap:'10px',marginBottom:'25px'}}>
           {activeRentals.map((r:any)=>{const t=timeLeft[r.id]||{h:0,m:0,s:0,overdue:false};return(
             <div key={r.id} style={{padding:'15px',backgroundColor:t.overdue?'#fef2f2':'#eff6ff',border:`1px solid ${t.overdue?'#fca5a5':'#bfdbfe'}`,borderRadius:'8px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <div><p style={{margin:0,fontWeight:'bold',fontSize:'16px',color:'#1e3a8a'}}>🔋 {r.power_banks?.pb_code||'Unknown'}</p><p style={{margin:'5px 0 0',fontSize:'12px',color:'#64748b'}}>Ticket: {r.ticket_code} • {r.customer_name||'Customer'}</p></div>
-              <div style={{textAlign:'right'}}><p style={{margin:0,fontSize:'12px',color:t.overdue?'#b91c1c':'#1d4ed8',fontWeight:'bold'}}>{t.overdue?'⚠️ OVERDUE':'Time Left'}</p><p style={{margin:'5px 0 0',fontSize:'20px',fontWeight:'bold',fontFamily:'monospace',color:t.overdue?'#b91c1c':'#0f172a'}}>{String(t.h).padStart(2,'0')}:{String(t.m).padStart(2,'0')}:{String(t.s).padStart(2,'0')}</p></div>
+              <div><p style={{margin:0,fontWeight:'bold',fontSize:'16px',color:'#1e3a8a'}}> {r.power_banks?.pb_code||'Unknown'}</p><p style={{margin:'5px 0 0',fontSize:'12px',color:'#64748b'}}>Ticket: {r.ticket_code} • {r.customer_name||'Customer'}</p></div>
+              <div style={{textAlign:'right'}}><p style={{margin:0,fontSize:'12px',color:t.overdue?'#b91c1c':'#1d4ed8',fontWeight:'bold'}}>{t.overdue?'️ OVERDUE':'Time Left'}</p><p style={{margin:'5px 0 0',fontSize:'20px',fontWeight:'bold',fontFamily:'monospace',color:t.overdue?'#b91c1c':'#0f172a'}}>{String(t.h).padStart(2,'0')}:{String(t.m).padStart(2,'0')}:{String(t.s).padStart(2,'0')}</p></div>
             </div>
           )})}
         </div>
@@ -188,7 +199,7 @@ export default function OwnerDashboard() {
         <p style={{margin:'0 0 10px',fontSize:'14px',opacity:0.9}}>{getFilterLabel()}</p>
         <p style={{margin:'0 0 5px',fontSize:'12px',opacity:0.9}}>({owner.revenue_share_percentage}% Share)</p>
         <h2 style={{margin:'0 0 10px',fontSize:'36px',fontWeight:'bold'}}>₦{periodStats.share.toLocaleString()}</h2>
-        <p style={{margin:0,fontSize:'14px',opacity:0.9}}>Total Location Revenue: ₦{periodStats.revenue.toLocaleString()}</p>
+        <p style={{margin:0,fontSize:'14px',opacity:0.9}}>Total Location Revenue: {periodStats.revenue.toLocaleString()}</p>
       </div>
 
       {/* Bank Details Section */}
