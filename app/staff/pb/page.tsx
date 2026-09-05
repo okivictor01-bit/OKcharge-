@@ -243,7 +243,7 @@ function StaffPowerBankContent() {
       )}
 
       <div style={{ marginTop: '40px', textAlign: 'center' }}>
-        <a href="/staff" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '16px' }}>← Back to Staff Dashboard</a>
+        <a href="/owner/dashboard" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '16px' }}>← Back to Owner Dashboard</a>
       </div>
     </main>
   );
