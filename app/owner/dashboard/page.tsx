@@ -10,7 +10,13 @@ export default function OwnerDashboard() {
   const [locations, setLocations] = useState<any[]>([]);
   const [allTransactions, setAllTransactions] = useState<any[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<any[]>([]);
-  const [stats, setStats] = useState({ totalRevenue: 0, ownerShare: 0, activeRentals: 0 });
+  
+  // Global stats (always show current state)
+  const [globalStats, setGlobalStats] = useState({ activeRentals: 0, totalLocations: 0 });
+  
+  // Period stats (changes based on filter)
+  const [periodStats, setPeriodStats] = useState({ revenue: 0, share: 0 });
+
   const [scanCode, setScanCode] = useState('');
   const router = useRouter();
 
@@ -49,6 +55,7 @@ export default function OwnerDashboard() {
       .eq('owner_id', ownerData.id);
     
     setLocations(locData || []);
+    setGlobalStats(prev => ({ ...prev, totalLocations: locData?.length || 0 }));
 
     if (locData && locData.length > 0) {
       const locationIds = locData.map(loc => loc.id);
@@ -60,24 +67,30 @@ export default function OwnerDashboard() {
         .order('created_at', { ascending: false });
 
       setAllTransactions(txData || []);
-      applyFilters(txData || [], ownerData.revenue_share_percentage || 30);
+      
+      // Calculate global active rentals (power banks currently out)
+      const activeCount = (txData || []).filter(t => t.status === 'active').length;
+      setGlobalStats(prev => ({ ...prev, activeRentals: activeCount }));
+
+      // Apply initial filter (Today)
+      applyFilters(txData || [], ownerData.revenue_share_percentage || 30, 'today', singleDate, startDate, endDate);
     }
 
     setLoading(false);
   };
 
-  const applyFilters = (transactions: any[], sharePercentage: number) => {
+  const applyFilters = (transactions: any[], sharePercentage: number, type: string, sDate: string, sStart: string, sEnd: string) => {
     let filtered = transactions;
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    if (filterType === 'today') {
+    if (type === 'today') {
       filtered = transactions.filter(t => {
         const createdAt = new Date(t.created_at);
         return t.status === 'completed' && createdAt >= todayStart;
       });
-    } else if (filterType === 'date' && singleDate) {
-      const selectedDate = new Date(singleDate);
+    } else if (type === 'date' && sDate) {
+      const selectedDate = new Date(sDate);
       selectedDate.setHours(0, 0, 0, 0);
       const nextDay = new Date(selectedDate);
       nextDay.setDate(nextDay.getDate() + 1);
@@ -86,10 +99,10 @@ export default function OwnerDashboard() {
         const createdAt = new Date(t.created_at);
         return t.status === 'completed' && createdAt >= selectedDate && createdAt < nextDay;
       });
-    } else if (filterType === 'range' && startDate && endDate) {
-      const start = new Date(startDate);
+    } else if (type === 'range' && sStart && sEnd) {
+      const start = new Date(sStart);
       start.setHours(0, 0, 0, 0);
-      const end = new Date(endDate);
+      const end = new Date(sEnd);
       end.setHours(23, 59, 59, 999);
       
       filtered = transactions.filter(t => {
@@ -100,26 +113,23 @@ export default function OwnerDashboard() {
 
     setFilteredTransactions(filtered);
     
-    // Calculate stats based on filtered transactions
-    let totalRevenue = 0;
-    let activeRentals = 0;
-    
-    transactions.forEach((tx: any) => {
+    // Calculate Revenue for the FILTERED period only
+    let periodRevenue = 0;
+    filtered.forEach((tx: any) => {
+      // We count completed, paid, and active as revenue for the period
       if (tx.status === 'completed' || tx.status === 'paid' || tx.status === 'active') {
-        totalRevenue += tx.amount_paid || 0;
-      }
-      if (tx.status === 'active') {
-        activeRentals += 1;
+        periodRevenue += tx.amount_paid || 0;
       }
     });
 
-    const ownerShare = totalRevenue * (sharePercentage / 100);
-    setStats({ totalRevenue, ownerShare, activeRentals });
+    const ownerShare = periodRevenue * (sharePercentage / 100);
+    setPeriodStats({ revenue: periodRevenue, share: ownerShare });
   };
 
+  // Re-apply filters when inputs change
   useEffect(() => {
     if (allTransactions.length > 0 && owner) {
-      applyFilters(allTransactions, owner.revenue_share_percentage || 30);
+      applyFilters(allTransactions, owner.revenue_share_percentage || 30, filterType, singleDate, startDate, endDate);
     }
   }, [filterType, singleDate, startDate, endDate]);
 
@@ -151,7 +161,6 @@ export default function OwnerDashboard() {
     return (
       <main style={{ padding: '20px', textAlign: 'center' }}>
         <h2>Profile not found.</h2>
-        <p>Please contact support.</p>
         <button onClick={handleLogout} style={{ marginTop: '20px', padding: '10px 20px' }}>Logout</button>
       </main>
     );
@@ -165,6 +174,13 @@ export default function OwnerDashboard() {
     borderRadius: '8px',
     fontSize: '16px',
     boxSizing: 'border-box'
+  };
+
+  const getFilterLabel = () => {
+    if (filterType === 'today') return "Today's Earnings";
+    if (filterType === 'date') return `Earnings for ${singleDate}`;
+    if (filterType === 'range') return `Earnings (${startDate} to ${endDate})`;
+    return "Earnings";
   };
 
   return (
@@ -181,16 +197,14 @@ export default function OwnerDashboard() {
 
       <p style={{ color: '#64748b', marginTop: '-15px', marginBottom: '25px' }}>Welcome, {owner.business_name}</p>
 
-      {/* Revenue Share Card */}
+      {/* Revenue Share Card - NOW DYNAMIC */}
       <div style={{ 
         backgroundColor: '#10b981', padding: '25px', borderRadius: '12px', marginBottom: '25px', color: 'white', textAlign: 'center' 
       }}>
-        <p style={{ margin: '0 0 10px 0', fontSize: '14px', opacity: 0.9 }}>
-          {filterType === 'today' ? "Today's Earnings" : filterType === 'date' ? `Earnings for ${singleDate}` : `Earnings (${startDate} - ${endDate})`}
-        </p>
+        <p style={{ margin: '0 0 10px 0', fontSize: '14px', opacity: 0.9 }}>{getFilterLabel()}</p>
         <p style={{ margin: '0 0 5px 0', fontSize: '12px', opacity: 0.9 }}>({owner.revenue_share_percentage}% Share)</p>
-        <h2 style={{ margin: '0 0 10px 0', fontSize: '36px', fontWeight: 'bold' }}>₦{stats.ownerShare.toLocaleString()}</h2>
-        <p style={{ margin: 0, fontSize: '14px', opacity: 0.9 }}>Total Location Revenue: ₦{stats.totalRevenue.toLocaleString()}</p>
+        <h2 style={{ margin: '0 0 10px 0', fontSize: '36px', fontWeight: 'bold' }}>₦{periodStats.share.toLocaleString()}</h2>
+        <p style={{ margin: 0, fontSize: '14px', opacity: 0.9 }}>Total Location Revenue: ₦{periodStats.revenue.toLocaleString()}</p>
       </div>
 
       {/* Filter Section */}
@@ -199,63 +213,28 @@ export default function OwnerDashboard() {
         
         <div style={{ marginBottom: '15px' }}>
           <label style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', cursor: 'pointer' }}>
-            <input
-              type="radio"
-              value="today"
-              checked={filterType === 'today'}
-              onChange={(e) => setFilterType(e.target.value as any)}
-              style={{ marginRight: '8px' }}
-            />
+            <input type="radio" value="today" checked={filterType === 'today'} onChange={(e) => setFilterType(e.target.value as any)} style={{ marginRight: '8px' }} />
             <span>Today</span>
           </label>
           
           <label style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', cursor: 'pointer' }}>
-            <input
-              type="radio"
-              value="date"
-              checked={filterType === 'date'}
-              onChange={(e) => setFilterType(e.target.value as any)}
-              style={{ marginRight: '8px' }}
-            />
+            <input type="radio" value="date" checked={filterType === 'date'} onChange={(e) => setFilterType(e.target.value as any)} style={{ marginRight: '8px' }} />
             <span>Specific Date</span>
           </label>
           
           {filterType === 'date' && (
-            <input
-              type="date"
-              value={singleDate}
-              onChange={(e) => setSingleDate(e.target.value)}
-              style={inputStyle}
-            />
+            <input type="date" value={singleDate} onChange={(e) => setSingleDate(e.target.value)} style={inputStyle} />
           )}
           
           <label style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', cursor: 'pointer' }}>
-            <input
-              type="radio"
-              value="range"
-              checked={filterType === 'range'}
-              onChange={(e) => setFilterType(e.target.value as any)}
-              style={{ marginRight: '8px' }}
-            />
+            <input type="radio" value="range" checked={filterType === 'range'} onChange={(e) => setFilterType(e.target.value as any)} style={{ marginRight: '8px' }} />
             <span>Date Range</span>
           </label>
           
           {filterType === 'range' && (
             <div>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                style={{ ...inputStyle, marginBottom: '10px' }}
-                placeholder="Start Date"
-              />
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                style={inputStyle}
-                placeholder="End Date"
-              />
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ ...inputStyle, marginBottom: '10px' }} />
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={inputStyle} />
             </div>
           )}
         </div>
@@ -274,31 +253,21 @@ export default function OwnerDashboard() {
         />
         <button 
           onClick={handleGoToPB}
-          style={{ 
-            width: '100%', 
-            padding: '12px', 
-            backgroundColor: '#2563eb', 
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '8px', 
-            fontSize: '16px', 
-            fontWeight: 'bold', 
-            cursor: 'pointer' 
-          }}
+          style={{ width: '100%', padding: '12px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}
         >
           Go to Power Bank
         </button>
       </div>
 
-      {/* Stats Grid */}
+      {/* Global Stats Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '25px' }}>
         <div style={{ backgroundColor: 'white', padding: '15px', borderRadius: '10px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-          <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Active Rentals</p>
-          <h3 style={{ margin: '5px 0 0 0', fontSize: '24px' }}>{stats.activeRentals}</h3>
+          <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Active Rentals (Now)</p>
+          <h3 style={{ margin: '5px 0 0 0', fontSize: '24px' }}>{globalStats.activeRentals}</h3>
         </div>
         <div style={{ backgroundColor: 'white', padding: '15px', borderRadius: '10px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
           <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>My Locations</p>
-          <h3 style={{ margin: '5px 0 0 0', fontSize: '24px' }}>{locations.length}</h3>
+          <h3 style={{ margin: '5px 0 0 0', fontSize: '24px' }}>{globalStats.totalLocations}</h3>
         </div>
       </div>
 
