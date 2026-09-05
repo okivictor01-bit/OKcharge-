@@ -12,9 +12,8 @@ export default function Home() {
       {/* 1. Header / Navigation */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
         <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2563eb' }}>⚡ OKcharge</div>
-        <div style={{ display: 'flex', gap: '15px' }}>
+        <div>
           <a href="/auth/login" style={{ textDecoration: 'none', color: '#475569', fontSize: '14px', fontWeight: 'bold' }}>Partner Login</a>
-          <a href="/auth/admin-login" style={{ textDecoration: 'none', color: '#94a3b8', fontSize: '14px' }}>Admin</a>
         </div>
       </header>
 
@@ -42,7 +41,7 @@ export default function Home() {
             transition: 'transform 0.2s'
           }}
         >
-          🔋 Rent a Power Bank Now
+           Rent a Power Bank Now
         </a>
       </section>
 
@@ -91,7 +90,7 @@ export default function Home() {
               borderRadius: '12px', 
               padding: '20px', 
               textAlign: 'center',
-              backgroundColor: idx === 1 ? '#eff6ff' : 'white', // Highlight 6 hours
+              backgroundColor: idx === 1 ? '#eff6ff' : 'white',
               borderColor: idx === 1 ? '#3b82f6' : '#e2e8f0'
             }}>
               <p style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#64748b', fontWeight: 'bold' }}>{plan.time}</p>
