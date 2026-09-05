@@ -8,7 +8,7 @@ export default function FAQPage() {
   const faqs = [
     {
       question: 'How do I rent a power bank?',
-      answer: 'Simply visit our Rent page, select your location, choose your rental duration, enter your details, and pay securely via Paystack. You'll receive a ticket code which you show to the staff to collect your power bank.'
+      answer: `Simply visit our Rent page, select your location, choose your rental duration, enter your details, and pay securely via Paystack. You'll receive a ticket code which you show to the staff to collect your power bank.`
     },
     {
       question: 'How much does it cost?',
@@ -20,7 +20,7 @@ export default function FAQPage() {
     },
     {
       question: 'Can I return the power bank to a different location?',
-      answer: 'Currently, power banks must be returned to the same location where they were rented. We're working on enabling cross-location returns soon!'
+      answer: 'Currently, power banks must be returned to the same location where they were rented. We are working on enabling cross-location returns soon!'
     },
     {
       question: 'Is my payment secure?',
@@ -28,15 +28,15 @@ export default function FAQPage() {
     },
     {
       question: 'What if the power bank is not working?',
-      answer: 'If you experience any issues with your power bank, contact us immediately via WhatsApp or the staff at your location. We'll replace it or refund your payment right away.'
+      answer: 'If you experience any issues with your power bank, contact us immediately via WhatsApp or the staff at your location. We will replace it or refund your payment right away.'
     },
     {
       question: 'How do I become a location partner?',
-      answer: 'Great question! Visit our registration page to sign up as a location partner. You'll earn 30% revenue share on every rental made at your location. We handle all the hardware and maintenance.'
+      answer: 'Great question! Visit our registration page to sign up as a location partner. You will earn 30% revenue share on every rental made at your location. We handle all the hardware and maintenance.'
     },
     {
       question: 'Do I need to create an account to rent?',
-      answer: 'No account creation needed! Just enter your details at checkout and you're good to go. We make it super simple.'
+      answer: 'No account creation needed! Just enter your details at checkout and you are good to go. We make it super simple.'
     },
     {
       question: 'What types of phones can I charge?',
@@ -110,7 +110,7 @@ export default function FAQPage() {
       }}>
         <h2 style={{ fontSize: '24px', color: '#1e40af', marginBottom: '15px' }}>Still have questions?</h2>
         <p style={{ fontSize: '16px', color: '#475569', marginBottom: '20px' }}>
-          Can't find the answer you're looking for? We're here to help!
+          Can't find the answer you are looking for? We are here to help!
         </p>
         <a href="/contact" style={{ 
           display: 'inline-block',
