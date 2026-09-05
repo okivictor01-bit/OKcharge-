@@ -8,12 +8,13 @@ interface Location {
   id: string;
   name: string;
   address: string;
+  subaccount_code: string | null; // Added to hold the owner's Paystack code
 }
 
 export default function RentPage() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState('');
-  const [duration, setDuration] = useState('1'); // Changed default to 1 hour
+  const [duration, setDuration] = useState('1');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,7 +22,6 @@ export default function RentPage() {
   const [error, setError] = useState('');
   const [paystackReady, setPaystackReady] = useState(false);
 
-  // UPDATED PRICING
   const pricing: Record<string, number> = {
     '1': 100,
     '6': 300,
@@ -34,12 +34,29 @@ export default function RentPage() {
   }, []);
 
   const fetchLocations = async () => {
+    // We join with location_owners to get the subaccount code in one go!
     const { data } = await supabase
       .from('locations')
-      .select('id, name, address')
+      .select(`
+        id, 
+        name, 
+        address,
+        location_owners (
+          paystack_subaccount_code
+        )
+      `)
       .eq('status', 'active')
       .eq('is_visible_on_map', true);
-    if (data) setLocations(data);
+    
+    if (data) {
+      const formattedData = data.map((loc: any) => ({
+        id: loc.id,
+        name: loc.name,
+        address: loc.address,
+        subaccount_code: loc.location_owners?.paystack_subaccount_code || null
+      }));
+      setLocations(formattedData);
+    }
   };
 
   const generateTicketCode = () => {
@@ -70,11 +87,16 @@ export default function RentPage() {
     const ticketCode = generateTicketCode();
     const email = `${customerPhone.replace(/\s/g, '')}@okcharge.ng`;
 
+    // 🚀 Find the selected location to get its subaccount code
+    const selectedLoc = locations.find(loc => loc.id === selectedLocation);
+    const subaccount = selectedLoc?.subaccount_code || undefined;
+
     const handler = (window as any).PaystackPop.setup({
       key: 'pk_live_9dd06423b57f6a6f6927e3ea2e28a101baa01fba',
       email: email,
       amount: amount,
       ref: ticketCode,
+      subaccount: subaccount, // 🎯 THIS IS THE MAGIC LINE THAT ENABLES AUTO-SPLIT!
       callback: function(response: any) {
         console.log('Payment successful:', response);
         saveRental(ticketCode, response.reference);
