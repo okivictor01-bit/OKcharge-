@@ -1,28 +1,136 @@
-import { createClient } from '@supabase/supabase-js';
+import type { Metadata } from "next";
 
-export default async function Home() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+export const metadata: Metadata = {
+  title: "OKcharge - Rent a Power Bank Instantly",
+  description: "Never run out of battery again. Rent a power bank from OKcharge locations across the city.",
+};
 
-  const { data, error } = await supabase.from('locations').select('name');
-
+export default function Home() {
   return (
-    <main style={{ padding: '20px', textAlign: 'center', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-      <h1 style={{ fontSize: '28px' }}>🔋 OKcharge Platform</h1>
-      <p style={{ color: '#666' }}>System Status:</p>
+    <main style={{ fontFamily: 'sans-serif', color: '#0f172a', backgroundColor: '#ffffff' }}>
+      
+      {/* 1. Header / Navigation */}
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2563eb' }}>⚡ OKcharge</div>
+        <div style={{ display: 'flex', gap: '15px' }}>
+          <a href="/auth/login" style={{ textDecoration: 'none', color: '#475569', fontSize: '14px', fontWeight: 'bold' }}>Partner Login</a>
+          <a href="/auth/admin-login" style={{ textDecoration: 'none', color: '#94a3b8', fontSize: '14px' }}>Admin</a>
+        </div>
+      </header>
 
-      {error ? (
-        <div style={{ background: '#fee2e2', color: '#b91c1c', padding: '15px', borderRadius: '8px', marginTop: '10px' }}>
-          ❌ Database Error: {error.message}
+      {/* 2. Hero Section */}
+      <section style={{ textAlign: 'center', padding: '60px 20px 40px', maxWidth: '800px', margin: '0 auto' }}>
+        <h1 style={{ fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: '800', margin: '0 0 20px 0', lineHeight: '1.1', color: '#0f172a' }}>
+          Power On The Go. <br />
+          <span style={{ color: '#2563eb' }}>Never Run Out.</span>
+        </h1>
+        <p style={{ fontSize: '18px', color: '#64748b', marginBottom: '40px', maxWidth: '600px', margin: '0 auto 40px auto' }}>
+          Rent a high-capacity power bank in seconds from any OKcharge station. Pay securely, charge your phone, and return it anywhere.
+        </p>
+        <a 
+          href="/rent" 
+          style={{ 
+            display: 'inline-block', 
+            backgroundColor: '#10b981', 
+            color: 'white', 
+            padding: '18px 40px', 
+            borderRadius: '50px', 
+            textDecoration: 'none', 
+            fontSize: '18px', 
+            fontWeight: 'bold',
+            boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
+            transition: 'transform 0.2s'
+          }}
+        >
+          🔋 Rent a Power Bank Now
+        </a>
+      </section>
+
+      {/* 3. How It Works */}
+      <section style={{ backgroundColor: '#f8fafc', padding: '60px 20px' }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+          <h2 style={{ textAlign: 'center', fontSize: '28px', marginBottom: '40px' }}>How It Works</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '30px' }}>
+            
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+              <div style={{ fontSize: '40px', marginBottom: '15px' }}>📍</div>
+              <h3 style={{ fontSize: '18px', marginBottom: '10px' }}>1. Find a Station</h3>
+              <p style={{ color: '#64748b', fontSize: '14px' }}>Locate the nearest OKcharge power bank station at your favorite store or cafe.</p>
+            </div>
+
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+              <div style={{ fontSize: '40px', marginBottom: '15px' }}>💳</div>
+              <h3 style={{ fontSize: '18px', marginBottom: '10px' }}>2. Pay Securely</h3>
+              <p style={{ color: '#64748b', fontSize: '14px' }}>Enter your details and pay instantly via Paystack. Get your unique rental ticket.</p>
+            </div>
+
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+              <div style={{ fontSize: '40px', marginBottom: '15px' }}>🔌</div>
+              <h3 style={{ fontSize: '18px', marginBottom: '10px' }}>3. Unlock & Charge</h3>
+              <p style={{ color: '#64748b', fontSize: '14px' }}>Show your ticket to the staff, grab a fully charged power bank, and enjoy!</p>
+            </div>
+
+          </div>
         </div>
-      ) : (
-        <div style={{ background: '#dcfce7', color: '#15803d', padding: '15px', borderRadius: '8px', marginTop: '10px' }}>
-          ✅ Connected to Supabase successfully!<br />
-          Found {data?.length || 0} locations in database.
+      </section>
+
+      {/* 4. Pricing Section */}
+      <section style={{ padding: '60px 20px', maxWidth: '800px', margin: '0 auto' }}>
+        <h2 style={{ textAlign: 'center', fontSize: '28px', marginBottom: '10px' }}>Simple, Transparent Pricing</h2>
+        <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '40px' }}>Choose the duration that fits your needs.</p>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '15px' }}>
+          {[
+            { time: '1 Hour', price: '₦100' },
+            { time: '6 Hours', price: '₦300' },
+            { time: '12 Hours', price: '₦500' },
+            { time: '24 Hours', price: '₦800' },
+          ].map((plan, idx) => (
+            <div key={idx} style={{ 
+              border: '1px solid #e2e8f0', 
+              borderRadius: '12px', 
+              padding: '20px', 
+              textAlign: 'center',
+              backgroundColor: idx === 1 ? '#eff6ff' : 'white', // Highlight 6 hours
+              borderColor: idx === 1 ? '#3b82f6' : '#e2e8f0'
+            }}>
+              <p style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#64748b', fontWeight: 'bold' }}>{plan.time}</p>
+              <h3 style={{ margin: 0, fontSize: '24px', color: '#0f172a' }}>{plan.price}</h3>
+            </div>
+          ))}
         </div>
-      )}
+      </section>
+
+      {/* 5. Partner CTA */}
+      <section style={{ backgroundColor: '#0f172a', color: 'white', padding: '60px 20px', textAlign: 'center' }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+          <h2 style={{ fontSize: '28px', marginBottom: '15px' }}>Own a Business Location?</h2>
+          <p style={{ color: '#94a3b8', marginBottom: '30px', fontSize: '16px' }}>
+            Partner with OKcharge and earn a 30% revenue share on every rental made at your location. We handle the hardware and maintenance.
+          </p>
+          <a 
+            href="/auth/register" 
+            style={{ 
+              display: 'inline-block', 
+              backgroundColor: 'white', 
+              color: '#0f172a', 
+              padding: '15px 30px', 
+              borderRadius: '8px', 
+              textDecoration: 'none', 
+              fontWeight: 'bold' 
+            }}
+          >
+            Become a Partner
+          </a>
+        </div>
+      </section>
+
+      {/* 6. Footer */}
+      <footer style={{ padding: '30px 20px', textAlign: 'center', color: '#64748b', fontSize: '14px', borderTop: '1px solid #e2e8f0' }}>
+        <p style={{ margin: '0 0 10px 0' }}>© 2026 OKcharge. All rights reserved.</p>
+        <p style={{ margin: 0 }}>Need help? Chat with us on WhatsApp via the button below.</p>
+      </footer>
+
     </main>
   );
 }
