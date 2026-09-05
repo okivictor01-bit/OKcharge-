@@ -130,12 +130,16 @@ export default function AdminDashboard() {
            Manage Locations <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>{stats.totalLocations} total →</span>
         </a>
         
+        <a href="/admin/owners" style={navButtonStyle}>
+           Manage Owners <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>→</span>
+        </a>
+
         <a href="/admin/powerbanks" style={navButtonStyle}>
           🔋 Add Power Bank <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>{stats.availablePowerBanks} available →</span>
         </a>
 
         <a href="/staff" style={navButtonStyle}>
-          👷 Staff Dashboard <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>→</span>
+           Staff Dashboard <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>→</span>
         </a>
       </div>
 
