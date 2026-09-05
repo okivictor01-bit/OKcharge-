@@ -14,27 +14,33 @@ export default function TestApiPage() {
 
   const handleTest = async () => {
     setLoading(true);
-    setResult('⏳ Sending request to API...');
+    setResult('⏳ Sending request to Supabase Edge Function...');
     
     try {
-      const res = await fetch('/api/create-subaccount', {
+      // Your exact Supabase Project URL
+      const supabaseUrl = 'https://zsjmudkesxrlrhtugdon.supabase.co'; 
+      
+      const edgeFunctionUrl = `${supabaseUrl}/functions/v1/create-paystack-subaccount`;
+
+      const res = await fetch(edgeFunctionUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}` 
+        },
         body: JSON.stringify(formData)
       });
       
-      // Check if the response is actually JSON
       const contentType = res.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
         const data = await res.json();
         setResult(`✅ Status: ${res.status}\n\n${JSON.stringify(data, null, 2)}`);
       } else {
-        // If it's HTML (like a 404 page), read it as text
         const text = await res.text();
-        setResult(`❌ Status: ${res.status}\nExpected JSON, but got:\n\n${text.substring(0, 500)}...`);
+        setResult(` Status: ${res.status}\nExpected JSON, but got:\n\n${text.substring(0, 500)}...`);
       }
     } catch (err: any) {
-      setResult(`🚨 Network Error: ${err.message}`);
+      setResult(` Network Error: ${err.message}`);
     }
     setLoading(false);
   };
