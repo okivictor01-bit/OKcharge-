@@ -1,8 +1,8 @@
 "use client";
 
 export default function WhatsAppButton() {
-  // 🚨 REPLACE THIS WITH YOUR ACTUAL WHATSAPP BUSINESS NUMBER (Include country code, e.g., 2348012345678)
-  const phoneNumber = "2348000000000"; 
+  // Your actual WhatsApp Business Number
+  const phoneNumber = "2347032385674"; 
   const message = encodeURIComponent("Hello OKcharge! I need help with renting a power bank.");
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
 
