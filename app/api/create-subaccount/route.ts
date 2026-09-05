@@ -1,20 +1,36 @@
 import { NextResponse } from 'next/server';
 
-// 1. Add a GET method to test if the route is alive
-export async function GET() {
-  return NextResponse.json({ 
-    message: "API Route is active and working!", 
-    timestamp: new Date().toISOString() 
+// Handle OPTIONS request (CORS preflight)
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
   });
 }
 
-// 2. The POST method for creating subaccounts
+// Handle GET request
+export async function GET() {
+  return NextResponse.json({ 
+    message: "API Route is active!", 
+    timestamp: new Date().toISOString(),
+    method: "GET"
+  }, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+    }
+  });
+}
+
+// Handle POST request
 export async function POST(request: Request) {
   try {
-    // Check if Secret Key exists
     const secretKey = process.env.PAYSTACK_SECRET_KEY;
     if (!secretKey) {
-      return NextResponse.json({ error: 'Server configuration error: Missing Paystack Secret Key' }, { status: 500 });
+      return NextResponse.json({ error: 'Missing Paystack Secret Key' }, { status: 500 });
     }
 
     const body = await request.json();
@@ -24,7 +40,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Call Paystack API
     const response = await fetch('https://api.paystack.co/subaccount', {
       method: 'POST',
       headers: {
@@ -39,21 +54,38 @@ export async function POST(request: Request) {
       })
     });
 
-    // Handle non-JSON responses from Paystack (like HTML error pages)
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.indexOf("application/json") !== -1) {
-      const data = await response.json();
-      if (data.status) {
-        return NextResponse.json({ success: true, subaccount_code: data.data.subaccount_code });
-      } else {
-        return NextResponse.json({ error: data.message || 'Failed to create subaccount', details: data }, { status: 400 });
-      }
-    } else {
-      const text = await response.text();
-      return NextResponse.json({ error: 'Paystack returned non-JSON response', details: text }, { status: 500 });
-    }
+    const data = await response.json();
 
+    if (data.status) {
+      return NextResponse.json({ 
+        success: true, 
+        subaccount_code: data.data.subaccount_code,
+        message: "Subaccount created successfully!"
+      }, {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+        }
+      });
+    } else {
+      return NextResponse.json({ 
+        error: data.message || 'Failed to create subaccount', 
+        details: data 
+      }, { 
+        status: 400,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+        }
+      });
+    }
   } catch (error: any) {
-    return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Internal Server Error', 
+      details: error.message 
+    }, { 
+      status: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      }
+    });
   }
 }
