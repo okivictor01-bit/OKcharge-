@@ -1,20 +1,18 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 export default function OwnerLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
 
-      // 1. If not logged in, go to login page
+      // 1. If NO session, force hard redirect to login
       if (!session) {
-        router.push('/auth/login');
+        window.location.href = '/auth/login';
         return;
       }
 
@@ -25,23 +23,23 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
         .eq('user_id', session.user.id)
         .single();
 
-      // 3. If they are not an owner, kick them out
+      // 3. If they are not an owner, kick them out to home
       if (error || !owner) {
-        router.push('/'); 
+        window.location.href = '/'; 
         return;
       }
 
-      // 4. If they are an owner, let them in
-      setLoading(false);
+      // 4. If they are an owner, allow rendering
+      setIsAuthorized(true);
     };
 
     checkAuth();
-  }, [router]);
+  }, []);
 
-  if (loading) {
+  if (!isAuthorized) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'sans-serif' }}>
-        <p>🔒 Verifying partner access...</p>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f8fafc' }}>
+        <p style={{ fontSize: '18px', color: '#64748b' }}>🔒 Verifying partner access...</p>
       </div>
     );
   }
