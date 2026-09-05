@@ -7,40 +7,47 @@ export default function TestApiPage() {
   const [result, setResult] = useState('');
   const [formData, setFormData] = useState({
     business_name: 'Test Business',
-    bank_code: '044', // Access Bank code
-    account_number: '0123456789', // Dummy account
+    bank_code: '044',
+    account_number: '0123456789',
     percentage: 30
   });
 
   const handleTest = async () => {
     setLoading(true);
-    setResult('⏳ Sending request to Supabase Edge Function...');
+    setResult('⏳ Sending request to Supabase Edge Function...\n');
     
     try {
-      // Your exact Supabase Project URL
-      const supabaseUrl = 'https://zsjmudkesxrlrhtugdon.supabase.co'; 
-      
+      const supabaseUrl = 'https://zsjmudkesxrlrhtugdon.supabase.co';
       const edgeFunctionUrl = `${supabaseUrl}/functions/v1/create-paystack-subaccount`;
+      
+      setResult(`📡 Sending to: ${edgeFunctionUrl}\n`);
+      setResult(prev => prev + `📦 Data: ${JSON.stringify(formData, null, 2)}\n\n`);
 
       const res = await fetch(edgeFunctionUrl, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}` 
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpzam11ZGtlc3hybHJodHVnZG9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU1MzA4MzEsImV4cCI6MjA0MTEwNjgzMX0.J8vKZxZ5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z` 
         },
         body: JSON.stringify(formData)
       });
       
-      const contentType = res.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        const data = await res.json();
-        setResult(`✅ Status: ${res.status}\n\n${JSON.stringify(data, null, 2)}`);
-      } else {
-        const text = await res.text();
-        setResult(` Status: ${res.status}\nExpected JSON, but got:\n\n${text.substring(0, 500)}...`);
+      setResult(prev => prev + `📥 Response Status: ${res.status}\n`);
+      setResult(prev => prev + `📋 Response Headers: ${JSON.stringify(Object.fromEntries(res.headers.entries()), null, 2)}\n\n`);
+      
+      const text = await res.text();
+      setResult(prev => prev + `📄 Raw Response:\n${text}\n\n`);
+      
+      // Try to parse as JSON if possible
+      try {
+        const jsonData = JSON.parse(text);
+        setResult(prev => prev + `✅ Parsed JSON:\n${JSON.stringify(jsonData, null, 2)}`);
+      } catch {
+        setResult(prev => prev + `❌ Response is not valid JSON`);
       }
+      
     } catch (err: any) {
-      setResult(` Network Error: ${err.message}`);
+      setResult(prev => prev + `🚨 Network Error: ${err.message}\nStack: ${err.stack}`);
     }
     setLoading(false);
   };
@@ -94,7 +101,7 @@ export default function TestApiPage() {
       <h3>API Response:</h3>
       <pre style={{ 
         backgroundColor: '#1e293b', color: '#10b981', padding: '15px', borderRadius: '8px', 
-        overflowX: 'auto', fontSize: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all'
+        overflowX: 'auto', fontSize: '11px', whiteSpace: 'pre-wrap', wordBreak: 'break-all'
       }}>
         {result || 'No response yet. Click the button above.'}
       </pre>
