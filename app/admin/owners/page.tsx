@@ -16,6 +16,7 @@ interface Owner {
 interface Location {
   id: string;
   name: string;
+  address: string; // <-- Added this to fix the TypeScript error
   owner_id: string | null;
 }
 
@@ -43,7 +44,7 @@ export default function ManageOwnersPage() {
     // Fetch all locations
     const { data: locationsData } = await supabase
       .from('locations')
-      .select('id, name, owner_id');
+      .select('id, name, address, owner_id');
 
     setOwners(ownersData || []);
     setLocations(locationsData || []);
@@ -182,7 +183,7 @@ export default function ManageOwnersPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
                 <div>
                   <h3 style={{ margin: '0 0 5px 0', fontSize: '18px' }}>{owner.business_name}</h3>
-                  <p style={{ margin: '3px 0', fontSize: '14px', color: '#64748b' }}> {owner.phone}</p>
+                  <p style={{ margin: '3px 0', fontSize: '14px', color: '#64748b' }}>📞 {owner.phone}</p>
                   <p style={{ margin: '3px 0', fontSize: '14px', color: '#64748b' }}>📧 {owner.email}</p>
                   <p style={{ margin: '3px 0', fontSize: '14px', color: '#64748b' }}>
                     💰 Revenue Share: {owner.revenue_share_percentage}%
@@ -203,7 +204,7 @@ export default function ManageOwnersPage() {
                     color: owner.status === 'approved' ? '#15803d' : '#b45309',
                     marginBottom: '10px'
                   }}>
-                    {owner.status === 'approved' ? '✓ Approved' : ' Pending'}
+                    {owner.status === 'approved' ? '✓ Approved' : '⏳ Pending'}
                   </span>
                   
                   <button
