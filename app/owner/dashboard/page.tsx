@@ -8,23 +8,29 @@ export default function OwnerDashboard() {
   const [loading, setLoading] = useState(true);
   const [owner, setOwner] = useState<any>(null);
   const [locations, setLocations] = useState<any[]>([]);
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [allTransactions, setAllTransactions] = useState<any[]>([]);
+  const [filteredTransactions, setFilteredTransactions] = useState<any[]>([]);
   const [stats, setStats] = useState({ totalRevenue: 0, ownerShare: 0, activeRentals: 0 });
+  const [scanCode, setScanCode] = useState('');
   const router = useRouter();
+
+  // Date filters
+  const [filterType, setFilterType] = useState<'today' | 'date' | 'range'>('today');
+  const [singleDate, setSingleDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
     checkUserAndFetchData();
   }, []);
 
   const checkUserAndFetchData = async () => {
-    // 1. Check if user is logged in
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       router.push('/auth/login');
       return;
     }
 
-    // 2. Fetch Owner Profile
     const { data: ownerData } = await supabase
       .from('location_owners')
       .select('*')
@@ -32,13 +38,11 @@ export default function OwnerDashboard() {
       .single();
 
     if (!ownerData) {
-      // If they logged in but don't have a profile yet
       setLoading(false);
       return;
     }
     setOwner(ownerData);
 
-    // 3. Fetch Locations owned by this user
     const { data: locData } = await supabase
       .from('locations')
       .select('*')
@@ -46,7 +50,6 @@ export default function OwnerDashboard() {
     
     setLocations(locData || []);
 
-    // 4. Fetch Transactions for these locations
     if (locData && locData.length > 0) {
       const locationIds = locData.map(loc => loc.id);
       
@@ -56,33 +59,88 @@ export default function OwnerDashboard() {
         .in('location_id', locationIds)
         .order('created_at', { ascending: false });
 
-      setTransactions(txData || []);
-
-      // 5. Calculate Revenue Share
-      let totalRevenue = 0;
-      let activeRentals = 0;
-      
-      (txData || []).forEach((tx: any) => {
-        if (tx.status === 'completed' || tx.status === 'paid' || tx.status === 'active') {
-          totalRevenue += tx.amount_paid || 0;
-        }
-        if (tx.status === 'active') {
-          activeRentals += 1;
-        }
-      });
-
-      const sharePercentage = ownerData.revenue_share_percentage || 30;
-      const ownerShare = totalRevenue * (sharePercentage / 100);
-
-      setStats({ totalRevenue, ownerShare, activeRentals });
+      setAllTransactions(txData || []);
+      applyFilters(txData || [], ownerData.revenue_share_percentage || 30);
     }
 
     setLoading(false);
   };
 
+  const applyFilters = (transactions: any[], sharePercentage: number) => {
+    let filtered = transactions;
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    if (filterType === 'today') {
+      filtered = transactions.filter(t => {
+        const createdAt = new Date(t.created_at);
+        return t.status === 'completed' && createdAt >= todayStart;
+      });
+    } else if (filterType === 'date' && singleDate) {
+      const selectedDate = new Date(singleDate);
+      selectedDate.setHours(0, 0, 0, 0);
+      const nextDay = new Date(selectedDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+      
+      filtered = transactions.filter(t => {
+        const createdAt = new Date(t.created_at);
+        return t.status === 'completed' && createdAt >= selectedDate && createdAt < nextDay;
+      });
+    } else if (filterType === 'range' && startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      
+      filtered = transactions.filter(t => {
+        const createdAt = new Date(t.created_at);
+        return t.status === 'completed' && createdAt >= start && createdAt <= end;
+      });
+    }
+
+    setFilteredTransactions(filtered);
+    
+    // Calculate stats based on filtered transactions
+    let totalRevenue = 0;
+    let activeRentals = 0;
+    
+    transactions.forEach((tx: any) => {
+      if (tx.status === 'completed' || tx.status === 'paid' || tx.status === 'active') {
+        totalRevenue += tx.amount_paid || 0;
+      }
+      if (tx.status === 'active') {
+        activeRentals += 1;
+      }
+    });
+
+    const ownerShare = totalRevenue * (sharePercentage / 100);
+    setStats({ totalRevenue, ownerShare, activeRentals });
+  };
+
+  useEffect(() => {
+    if (allTransactions.length > 0 && owner) {
+      applyFilters(allTransactions, owner.revenue_share_percentage || 30);
+    }
+  }, [filterType, singleDate, startDate, endDate]);
+
+  const handleGoToPB = () => {
+    if (scanCode) {
+      window.location.href = `/staff/pb?code=${scanCode}`;
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/auth/login');
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-NG', { 
+      day: '2-digit', 
+      month: 'short', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
   };
 
   if (loading) {
@@ -99,8 +157,14 @@ export default function OwnerDashboard() {
     );
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-NG', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '12px',
+    marginBottom: '15px',
+    border: '1px solid #cbd5e1',
+    borderRadius: '8px',
+    fontSize: '16px',
+    boxSizing: 'border-box'
   };
 
   return (
@@ -121,9 +185,109 @@ export default function OwnerDashboard() {
       <div style={{ 
         backgroundColor: '#10b981', padding: '25px', borderRadius: '12px', marginBottom: '25px', color: 'white', textAlign: 'center' 
       }}>
-        <p style={{ margin: '0 0 10px 0', fontSize: '14px', opacity: 0.9 }}>Your Earnings ({owner.revenue_share_percentage}% Share)</p>
+        <p style={{ margin: '0 0 10px 0', fontSize: '14px', opacity: 0.9 }}>
+          {filterType === 'today' ? "Today's Earnings" : filterType === 'date' ? `Earnings for ${singleDate}` : `Earnings (${startDate} - ${endDate})`}
+        </p>
+        <p style={{ margin: '0 0 5px 0', fontSize: '12px', opacity: 0.9 }}>({owner.revenue_share_percentage}% Share)</p>
         <h2 style={{ margin: '0 0 10px 0', fontSize: '36px', fontWeight: 'bold' }}>₦{stats.ownerShare.toLocaleString()}</h2>
         <p style={{ margin: 0, fontSize: '14px', opacity: 0.9 }}>Total Location Revenue: ₦{stats.totalRevenue.toLocaleString()}</p>
+      </div>
+
+      {/* Filter Section */}
+      <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '25px' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '15px' }}>Filter Transactions</h3>
+        
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', cursor: 'pointer' }}>
+            <input
+              type="radio"
+              value="today"
+              checked={filterType === 'today'}
+              onChange={(e) => setFilterType(e.target.value as any)}
+              style={{ marginRight: '8px' }}
+            />
+            <span>Today</span>
+          </label>
+          
+          <label style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', cursor: 'pointer' }}>
+            <input
+              type="radio"
+              value="date"
+              checked={filterType === 'date'}
+              onChange={(e) => setFilterType(e.target.value as any)}
+              style={{ marginRight: '8px' }}
+            />
+            <span>Specific Date</span>
+          </label>
+          
+          {filterType === 'date' && (
+            <input
+              type="date"
+              value={singleDate}
+              onChange={(e) => setSingleDate(e.target.value)}
+              style={inputStyle}
+            />
+          )}
+          
+          <label style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', cursor: 'pointer' }}>
+            <input
+              type="radio"
+              value="range"
+              checked={filterType === 'range'}
+              onChange={(e) => setFilterType(e.target.value as any)}
+              style={{ marginRight: '8px' }}
+            />
+            <span>Date Range</span>
+          </label>
+          
+          {filterType === 'range' && (
+            <div>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                style={{ ...inputStyle, marginBottom: '10px' }}
+                placeholder="Start Date"
+              />
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                style={inputStyle}
+                placeholder="End Date"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Manual Entry Section */}
+      <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '25px' }}>
+        <h3 style={{ marginTop: 0 }}>Manage Power Banks</h3>
+        <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '15px' }}>Enter a Power Bank code to manage</p>
+        <input
+          type="text"
+          placeholder="e.g., OKJD02"
+          value={scanCode}
+          onChange={(e) => setScanCode(e.target.value.toUpperCase())}
+          style={inputStyle}
+        />
+        <button 
+          onClick={handleGoToPB}
+          style={{ 
+            width: '100%', 
+            padding: '12px', 
+            backgroundColor: '#2563eb', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '8px', 
+            fontSize: '16px', 
+            fontWeight: 'bold', 
+            cursor: 'pointer' 
+          }}
+        >
+          Go to Power Bank
+        </button>
       </div>
 
       {/* Stats Grid */}
@@ -154,19 +318,33 @@ export default function OwnerDashboard() {
       )}
 
       {/* Recent Transactions */}
-      <h3 style={{ marginBottom: '10px', marginTop: '25px' }}>Recent Transactions</h3>
-      {transactions.length === 0 ? (
-        <p style={{ color: '#64748b' }}>No transactions yet.</p>
+      <h3 style={{ marginBottom: '10px', marginTop: '25px' }}>
+        Transaction History {filterType !== 'today' && <span style={{ fontSize: '14px', color: '#64748b', fontWeight: 'normal' }}>(Filtered)</span>}
+      </h3>
+      {filteredTransactions.length === 0 ? (
+        <div style={{ padding: '30px', backgroundColor: '#f8fafc', borderRadius: '8px', textAlign: 'center', color: '#64748b' }}>
+          No transactions found for this period.
+        </div>
       ) : (
-        transactions.slice(0, 5).map(tx => (
+        filteredTransactions.map(tx => (
           <div key={tx.id} style={{ padding: '15px', backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
             <div>
-              <p style={{ margin: 0, fontWeight: 'bold' }}>{tx.ticket_code}</p>
+              <p style={{ margin: 0, fontWeight: 'bold', color: '#2563eb' }}>{tx.ticket_code}</p>
               <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#64748b' }}>{formatDate(tx.created_at)}</p>
             </div>
             <div style={{ textAlign: 'right' }}>
               <p style={{ margin: 0, fontWeight: 'bold', color: '#10b981' }}>₦{tx.amount_paid}</p>
-              <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#64748b' }}>{tx.status}</p>
+              <span style={{
+                display: 'inline-block',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                backgroundColor: tx.status === 'completed' ? '#dcfce7' : tx.status === 'active' ? '#dbeafe' : '#fee2e2',
+                color: tx.status === 'completed' ? '#15803d' : tx.status === 'active' ? '#1d4ed8' : '#b91c1c'
+              }}>
+                {tx.status.toUpperCase()}
+              </span>
             </div>
           </div>
         ))
