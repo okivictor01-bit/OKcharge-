@@ -7,14 +7,14 @@ export default function TestApiPage() {
   const [result, setResult] = useState('');
   const [formData, setFormData] = useState({
     business_name: 'Test Business',
-    bank_name: '044', // 044 is the code for Access Bank. Paystack requires codes, not names!
-    account_number: '0123456789', // A dummy account number to test the error
+    bank_code: '044', // Access Bank code
+    account_number: '0123456789', // Dummy account
     percentage: 30
   });
 
   const handleTest = async () => {
     setLoading(true);
-    setResult(' Sending request to Paystack...');
+    setResult('⏳ Sending request to API...');
     
     try {
       const res = await fetch('/api/create-subaccount', {
@@ -22,11 +22,19 @@ export default function TestApiPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
-      const data = await res.json();
-      // Show the result nicely formatted
-      setResult(JSON.stringify(data, null, 2));
+      
+      // Check if the response is actually JSON
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const data = await res.json();
+        setResult(`✅ Status: ${res.status}\n\n${JSON.stringify(data, null, 2)}`);
+      } else {
+        // If it's HTML (like a 404 page), read it as text
+        const text = await res.text();
+        setResult(`❌ Status: ${res.status}\nExpected JSON, but got:\n\n${text.substring(0, 500)}...`);
+      }
     } catch (err: any) {
-      setResult(' Network Error: ' + err.message);
+      setResult(`🚨 Network Error: ${err.message}`);
     }
     setLoading(false);
   };
@@ -45,8 +53,8 @@ export default function TestApiPage() {
 
         <label style={{ display: 'block', marginBottom: '15px', fontWeight: 'bold' }}>Bank Code (e.g., 044 for Access)</label>
         <input 
-          value={formData.bank_name} 
-          onChange={(e) => setFormData({...formData, bank_name: e.target.value})}
+          value={formData.bank_code} 
+          onChange={(e) => setFormData({...formData, bank_code: e.target.value})}
           style={{ width: '100%', padding: '10px', marginBottom: '15px', borderRadius: '6px', border: '1px solid #ccc' }}
         />
 
@@ -80,7 +88,7 @@ export default function TestApiPage() {
       <h3>API Response:</h3>
       <pre style={{ 
         backgroundColor: '#1e293b', color: '#10b981', padding: '15px', borderRadius: '8px', 
-        overflowX: 'auto', fontSize: '12px', whiteSpace: 'pre-wrap' 
+        overflowX: 'auto', fontSize: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all'
       }}>
         {result || 'No response yet. Click the button above.'}
       </pre>
