@@ -69,23 +69,43 @@ export default function AdminPowerBanks() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to permanently delete this power bank? This action cannot be undone.')) {
+    if (!window.confirm('⚠️ Are you sure you want to permanently delete this power bank? This action cannot be undone.')) {
       return;
     }
 
     try {
-      const { error } = await supabase.from('power_banks').delete().eq('id', id);
+      // 1. Check if the power bank has any active rentals
+      const { data: activeRentals, error: checkError } = await supabase
+        .from('rentals')
+        .select('id, status')
+        .eq('power_bank_id', id)
+        .eq('status', 'active');
+
+      if (checkError) {
+        console.error('Error checking rentals:', checkError);
+      }
+
+      if (activeRentals && activeRentals.length > 0) {
+        alert('❌ Cannot delete! This power bank has active rentals. Please return it first or mark the rental as completed.');
+        return;
+      }
+
+      // 2. Proceed with deletion
+      const { error } = await supabase
+        .from('power_banks')
+        .delete()
+        .eq('id', id);
       
       if (error) {
-        alert('Error deleting power bank: ' + error.message);
-        console.error('Delete error:', error);
+        console.error('Delete error details:', error);
+        alert(' Error deleting power bank:\n\n' + error.message);
       } else {
-        alert('Power bank deleted successfully!');
+        alert('✅ Power bank deleted successfully!');
         fetchPowerBanks(); // Refresh the list
       }
     } catch (err: any) {
-      alert('Error deleting power bank: ' + err.message);
       console.error('Delete error:', err);
+      alert('❌ Unexpected error: ' + err.message);
     }
   };
 
