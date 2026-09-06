@@ -51,17 +51,16 @@ const stateLGAs: Record<string, string[]> = {
   'Plateau': ['Jos North', 'Jos South', 'Jos East', 'Bokkos', 'Barkin Ladi', 'Bassa', 'Kanam', 'Kanke', 'Langtang North', 'Langtang South'],
   'Adamawa': ['Yola North', 'Yola South', 'Girei', 'Demsa', 'Fufore', 'Ganaye', 'Gombi', 'Guyuk', 'Hong', 'Jada'],
   'Taraba': ['Jalingo', 'Ardo Kola', 'Bali', 'Donga', 'Gashaka', 'Gassol', 'Ibi', 'Karim Lamido', 'Lau', 'Sardauna'],
-  'Bauchi': ['Bauchi', 'Alkaleri', 'Bauchi', 'Bogoro', 'Damban', 'Darazo', 'Dass', 'Ganjuwa', 'Giade', 'Itas/Gadau'],
+  'Bauchi': ['Bauchi', 'Alkaleri', 'Bogoro', 'Damban', 'Darazo', 'Dass', 'Ganjuwa', 'Giade', 'Itas/Gadau'],
   'Borno': ['Maiduguri', 'Askira/Uba', 'Bama', 'Bayo', 'Biu', 'Chibok', 'Damboa', 'Dikwa', 'Gubio', 'Guzamala'],
   'Yobe': ['Damaturu', 'Bade', 'Bursari', 'Fika', 'Fune', 'Geidam', 'Gujba', 'Gulani', 'Jakusko', 'Karasuwa'],
   'Gombe': ['Gombe', 'Akko', 'Balanga', 'Billiri', 'Dukku', 'Kaltungo', 'Kwami', 'Nafada', 'Shongom', 'Yamaltu/Deba'],
   'Jigawa': ['Dutse', 'Auyo', 'Babura', 'Biriniwa', 'Birnin Kudu', 'Buji', 'Gagarawa', 'Garki', 'Gumel', 'Guri'],
   'Kebbi': ['Birnin Kebbi', 'Aleiro', 'Arewa Dandi', 'Argungu', 'Augie', 'Bagudo', 'Dandi', 'Fakai', 'Gwandu', 'Jega'],
-  'Zamfara': ['Gusau', 'Anka', 'Bakura', 'Birnin Magaji/Kiyaw', 'Bukkuyum', 'Bungudu', 'Gummi', 'Gusau', 'Kaura Namoda', 'Maradun'],
+  'Zamfara': ['Gusau', 'Anka', 'Bakura', 'Birnin Magaji/Kiyaw', 'Bukkuyum', 'Bungudu', 'Gummi', 'Kaura Namoda', 'Maradun'],
   'Bayelsa': ['Yenagoa', 'Brass', 'Ekeremor', 'Kolokuma/Opokuma', 'Nembe', 'Ogbia', 'Sagbama', 'Southern Ijaw'],
   'Cross River': ['Calabar Municipal', 'Calabar South', 'Akamkpa', 'Akpabuyo', 'Bakassi', 'Biase', 'Boki', 'Etung', 'Ikom', 'Obanliku'],
-  'Akwa Ibom': ['Uyo', 'Abak', 'Eastern Obolo', 'Eket', 'Esit Eket', 'Essien Udim', 'Etim Ekpo', 'Etinan', 'Ibeno', 'Ibesikpo Asutan'],
-  'Oyo': ['Ibadan North', 'Ibadan South-West', 'Ibadan South-East', 'Ibadan North-East', 'Ibadan North-West', 'Egbeda', 'Akinyele', 'Oluyole', 'Ona-Ara', 'Lagelu']
+  'Akwa Ibom': ['Uyo', 'Abak', 'Eastern Obolo', 'Eket', 'Esit Eket', 'Essien Udim', 'Etim Ekpo', 'Etinan', 'Ibeno', 'Ibesikpo Asutan']
 };
 
 export default function RentPage() {
@@ -334,10 +333,10 @@ export default function RentPage() {
 
               <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Rental Duration *</label>
               <select style={selectStyle} value={duration} onChange={(e) => setDuration(e.target.value)}>
-                <option value="1">1 hour - 100</option>
+                <option value="1">1 hour - ₦100</option>
                 <option value="3">3 hours - ₦200</option>
                 <option value="5">5 hours - ₦300</option>
-                <option value="24">24 hours - 800</option>
+                <option value="24">24 hours - ₦800</option>
               </select>
 
               <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Your Name *</label>
