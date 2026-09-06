@@ -68,6 +68,27 @@ export default function AdminPowerBanks() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to permanently delete this power bank? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('power_banks').delete().eq('id', id);
+      
+      if (error) {
+        alert('Error deleting power bank: ' + error.message);
+        console.error('Delete error:', error);
+      } else {
+        alert('Power bank deleted successfully!');
+        fetchPowerBanks(); // Refresh the list
+      }
+    } catch (err: any) {
+      alert('Error deleting power bank: ' + err.message);
+      console.error('Delete error:', err);
+    }
+  };
+
   const handleStatusChange = async (id: string, newStatus: string) => {
     const { error } = await supabase
       .from('power_banks')
@@ -79,15 +100,6 @@ export default function AdminPowerBanks() {
     } else {
       alert('Error updating status: ' + error.message);
     }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to permanently delete this power bank?')) return;
-
-    const { error } = await supabase.from('power_banks').delete().eq('id', id);
-    
-    if (!error) fetchPowerBanks();
-    else alert('Error deleting power bank: ' + error.message);
   };
 
   const getStatusColor = (status: string) => {
@@ -250,7 +262,7 @@ export default function AdminPowerBanks() {
                       fontSize: '12px', fontWeight: 'bold', cursor: 'pointer'
                     }}
                   >
-                    🔵 Rented
+                     Rented
                   </button>
                   <button 
                     onClick={() => handleStatusChange(pb.id, 'damaged')}
@@ -274,7 +286,7 @@ export default function AdminPowerBanks() {
                       fontSize: '12px', fontWeight: 'bold', cursor: 'pointer'
                     }}
                   >
-                     Lost
+                    🚨 Lost
                   </button>
                 </div>
 
@@ -284,7 +296,7 @@ export default function AdminPowerBanks() {
                     onClick={() => handleDelete(pb.id)}
                     style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', backgroundColor: '#ef4444', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}
                   >
-                     Delete
+                    🗑 Delete
                   </button>
                 </div>
               </div>
