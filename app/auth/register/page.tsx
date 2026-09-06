@@ -16,7 +16,7 @@ export default function RegisterPage() {
     password: '',
     bank_name: '',
     account_number: '',
-    partner_type: 'standard' // Default to standard
+    partner_type: 'standard' 
   });
 
   const banks = [
@@ -69,8 +69,8 @@ export default function RegisterPage() {
               email: formData.email,
               bank_name: formData.bank_name,
               account_number: formData.account_number,
-              partner_type: formData.partner_type, // Save the partner type
-              revenue_share_percentage: formData.partner_type === 'owner' ? 75 : 40, // Auto-set percentage
+              partner_type: formData.partner_type, 
+              revenue_share_percentage: formData.partner_type === 'owner' ? 75 : 40, 
               created_at: new Date().toISOString()
             }
           ]);
@@ -158,7 +158,7 @@ export default function RegisterPage() {
           minLength={6}
         />
 
-        {/*  NEW: Partner Type Selection */}
+        {/* Partnership Type Selection */}
         <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>Partnership Type *</label>
         <div style={{ display: 'grid', gap: '10px', marginBottom: '20px' }}>
           <label style={{
@@ -203,54 +203,4 @@ export default function RegisterPage() {
             />
             <div>
               <div style={{ fontWeight: 'bold', color: '#0f172a' }}>Owner Partnership</div>
-              <div style={{ fontSize: '13px', color: '#64748b' }}>You provide power banks • You earn 75%</div>
-            </div>
-          </label>
-        </div>
-
-        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Bank *</label>
-        <select
-          style={inputStyle}
-          value={formData.bank_name}
-          onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
-          required
-        >
-          <option value="">Select your bank</option>
-          {banks.map(b => <option key={b.code} value={b.name}>{b.name}</option>)}
-        </select>
-
-        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Account Number *</label>
-        <input
-          style={inputStyle}
-          type="text"
-          placeholder="10-digit account number"
-          value={formData.account_number}
-          onChange={(e) => setFormData({ ...formData, account_number: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-          required
-        />
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            width: '100%',
-            padding: '18px',
-            backgroundColor: loading ? '#999' : '#10b981',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '18px',
-            fontWeight: 'bold',
-            cursor: 'pointer'
-          }}
-        >
-          {loading ? 'Registering...' : 'Register Business'}
-        </button>
-      </form>
-
-      <div style={{ marginTop: '30px', textAlign: 'center', fontSize: '14px', color: '#64748b' }}>
-        Already have an account? <Link href="/auth/login" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 'bold' }}>Login Here</Link>
-      </div>
-    </main>
-  );
-}
+              <div style={{ fontSize: '13
