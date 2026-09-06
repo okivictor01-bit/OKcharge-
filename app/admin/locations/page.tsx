@@ -2,228 +2,106 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 
-interface Location {
-  id: string;
-  name: string;
-  address: string;
-  owner_name?: string;
-  owner_phone?: string;
-  status: string;
-  latitude: number | null;
-  longitude: number | null;
-  created_at: string;
-}
-
-export default function LocationsListPage() {
-  const [locations, setLocations] = useState<Location[]>([]);
+export default function AdminLocations() {
+  const router = useRouter();
+  const [locations, setLocations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState('');
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchLocations();
-  }, []);
+  useEffect(() => { fetchLocations(); }, []);
 
   const fetchLocations = async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('locations')
       .select('*')
       .order('created_at', { ascending: false });
-    
-    if (data) {
-      setLocations(data);
-    }
+      
+    if (!error) setLocations(data || []);
     setLoading(false);
   };
 
-  const handleSuspend = async (locationId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-    const action = newStatus === 'inactive' ? 'suspended' : 'activated';
-    
+  const handleToggleStatus = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
     const { error } = await supabase
       .from('locations')
       .update({ status: newStatus })
-      .eq('id', locationId);
-
-    if (error) {
-      setMessage('Error: ' + error.message);
-    } else {
-      setMessage(`Location ${action} successfully!`);
-      fetchLocations(); // Refresh the list
-    }
+      .eq('id', id);
+      
+    if (!error) fetchLocations();
   };
 
-  const handleDelete = async (locationId: string) => {
-    const { error } = await supabase
-      .from('locations')
-      .delete()
-      .eq('id', locationId);
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure? This will delete the location AND all power banks assigned to it.')) return;
 
-    if (error) {
-      setMessage('Error: ' + error.message);
-    } else {
-      setMessage('Location deleted successfully!');
-      setConfirmDelete(null);
-      fetchLocations(); // Refresh the list
-    }
+    // 1. First, delete all power banks at this location to avoid foreign key errors
+    await supabase.from('power_banks').delete().eq('location_id', id);
+    
+    // 2. Then, delete the location itself
+    const { error } = await supabase.from('locations').delete().eq('id', id);
+    
+    if (!error) fetchLocations();
+    else alert('Error deleting location: ' + error.message);
   };
 
-  const cardStyle = {
-    padding: '20px',
-    marginBottom: '15px',
-    border: '1px solid #ddd',
-    borderRadius: '12px',
-    backgroundColor: '#fff',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-  };
-
-  const badgeStyle = (status: string) => ({
-    display: 'inline-block',
-    padding: '4px 12px',
-    borderRadius: '20px',
-    fontSize: '12px',
-    fontWeight: 'bold',
-    backgroundColor: status === 'active' ? '#dcfce7' : '#fee2e2',
-    color: status === 'active' ? '#15803d' : '#b91c1c'
-  });
-
-  const buttonStyle = {
-    padding: '8px 16px',
-    border: 'none',
-    borderRadius: '6px',
-    fontSize: '14px',
-    fontWeight: 'bold',
-    cursor: 'pointer' as const,
-    marginRight: '8px',
-    marginBottom: '8px'
-  };
+  if (loading) return <main style={{ padding: '20px', textAlign: 'center' }}>Loading locations...</main>;
 
   return (
     <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '800px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h1 style={{ fontSize: '24px' }}>All Locations ({locations.length})</h1>
-        <a 
-          href="/admin" 
-          style={{ 
-            backgroundColor: '#2563eb', 
-            color: 'white', 
-            padding: '10px 20px', 
-            borderRadius: '8px', 
-            textDecoration: 'none',
-            fontWeight: 'bold'
-          }}
-        >
-          + Add New
-        </a>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+        <h1 style={{ fontSize: '24px', margin: 0 }}>All Locations ({locations.length})</h1>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <a href="/admin/print-qr" style={{ backgroundColor: '#8b5cf6', color: 'white', padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', fontSize: '14px', fontWeight: 'bold' }}>🖨️ Print QRs</a>
+          <a href="/admin" style={{ backgroundColor: '#2563eb', color: 'white', padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', fontSize: '14px', fontWeight: 'bold' }}>+ Add New</a>
+        </div>
       </div>
 
-      {message && (
-        <div style={{ 
-          padding: '15px', 
-          borderRadius: '8px', 
-          marginBottom: '20px',
-          backgroundColor: message.includes('Error') ? '#fee2e2' : '#dcfce7',
-          color: message.includes('Error') ? '#b91c1c' : '#15803d'
-        }}>
-          {message}
-          <button 
-            onClick={() => setMessage('')}
-            style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px' }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {loading ? (
-        <p>Loading locations...</p>
-      ) : locations.length === 0 ? (
-        <div style={{ ...cardStyle, textAlign: 'center', padding: '40px' }}>
-          <p style={{ color: '#666', marginBottom: '15px' }}>No locations yet</p>
-          <a href="/admin" style={{ color: '#2563eb', fontWeight: 'bold' }}>Add your first location</a>
-        </div>
+      {locations.length === 0 ? (
+        <p style={{ textAlign: 'center', color: '#64748b' }}>No locations found.</p>
       ) : (
         locations.map((loc) => (
-          <div key={loc.id} style={{ ...cardStyle, opacity: loc.status === 'inactive' ? 0.7 : 1 }}>
+          <div key={loc.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '15px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-              <h2 style={{ margin: 0, fontSize: '18px', color: '#1f2937' }}>{loc.name}</h2>
-              <span style={badgeStyle(loc.status)}>
+              <h2 style={{ margin: 0, fontSize: '20px', color: '#0f172a' }}>{loc.name}</h2>
+              <span style={{ 
+                padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold',
+                backgroundColor: loc.status === 'active' ? '#dcfce7' : '#fee2e2',
+                color: loc.status === 'active' ? '#15803d' : '#b91c1c'
+              }}>
                 {loc.status === 'active' ? '✓ Active' : '⚠ Suspended'}
               </span>
             </div>
-
-            <div style={{ marginBottom: '10px' }}>
-              <p style={{ margin: '5px 0', color: '#4b5563', fontSize: '14px' }}>
-                📍 {loc.address}
-              </p>
-              {loc.owner_name && (
-                <p style={{ margin: '5px 0', color: '#4b5563', fontSize: '14px' }}>
-                   {loc.owner_name}
-                </p>
-              )}
-              {loc.owner_phone && (
-                <p style={{ margin: '5px 0', color: '#4b5563', fontSize: '14px' }}>
-                   {loc.owner_phone}
-                </p>
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '15px', marginTop: '15px' }}>
-              <button
-                onClick={() => handleSuspend(loc.id, loc.status)}
-                style={{
-                  ...buttonStyle,
-                  backgroundColor: loc.status === 'active' ? '#f59e0b' : '#10b981',
-                  color: 'white'
+            
+            <p style={{ margin: '5px 0', color: '#475569', fontSize: '14px' }}>📍 {loc.address}</p>
+            <p style={{ margin: '5px 0', color: '#64748b', fontSize: '14px' }}>👤 {loc.contact_name || 'N/A'} • 📞 {loc.contact_phone || 'N/A'}</p>
+            
+            <div style={{ marginTop: '20px', display: 'flex', gap: '10px', borderTop: '1px solid #f1f5f9', paddingTop: '15px' }}>
+              <button 
+                onClick={() => handleToggleStatus(loc.id, loc.status)}
+                style={{ 
+                  padding: '8px 16px', borderRadius: '6px', border: 'none', fontWeight: 'bold', cursor: 'pointer',
+                  backgroundColor: loc.status === 'active' ? '#f59e0b' : '#10b981', color: 'white' 
                 }}
               >
                 {loc.status === 'active' ? '⏸ Suspend' : '▶ Activate'}
               </button>
+              
+              <button 
+                onClick={() => handleDelete(loc.id)}
+                style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', backgroundColor: '#ef4444', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                🗑 Delete
+              </button>
 
-              {confirmDelete === loc.id ? (
-                <div style={{ display: 'inline-block' }}>
-                  <span style={{ fontSize: '14px', color: '#b91c1c', marginRight: '10px' }}>Are you sure?</span>
-                  <button
-                    onClick={() => handleDelete(loc.id)}
-                    style={{
-                      ...buttonStyle,
-                      backgroundColor: '#ef4444',
-                      color: 'white'
-                    }}
-                  >
-                    Yes, Delete
-                  </button>
-                  <button
-                    onClick={() => setConfirmDelete(null)}
-                    style={{
-                      ...buttonStyle,
-                      backgroundColor: '#6b7280',
-                      color: 'white'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setConfirmDelete(loc.id)}
-                  style={{
-                    ...buttonStyle,
-                    backgroundColor: '#ef4444',
-                    color: 'white'
-                  }}
-                >
-                  🗑 Delete
-                </button>
-              )}
+              <a href={`/admin/powerbanks?location=${loc.id}`} style={{ marginLeft: 'auto', color: '#2563eb', textDecoration: 'none', fontSize: '14px', fontWeight: 'bold', alignSelf: 'center' }}>
+                Manage Power Banks →
+              </a>
             </div>
           </div>
         ))
       )}
-
+      
       <div style={{ marginTop: '30px', textAlign: 'center' }}>
         <a href="/admin/dashboard" style={{ color: '#2563eb', textDecoration: 'none' }}>← Back to Dashboard</a>
       </div>
