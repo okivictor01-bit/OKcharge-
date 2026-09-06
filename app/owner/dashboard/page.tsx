@@ -32,7 +32,6 @@ export default function OwnerDashboard() {
 
   const [timeLeft, setTimeLeft] = useState<Record<string, { h: number; m: number; s: number; overdue: boolean }>>({});
 
-  // ✅ CORRECTED BANK CODES FOR PAYSTACK SUBACCOUNTS
   const banks = [
     { code: '044', name: 'Access Bank' },
     { code: '058', name: 'GTBank' },
@@ -100,38 +99,55 @@ export default function OwnerDashboard() {
       setAllTransactions(txData || []);
       setActiveRentals(activeData || []);
       setGlobalStats(prev => ({ ...prev, activeRentals: activeData?.length || 0 }));
-      applyFilters(txData || [], ownerData.revenue_share_percentage || 30, 'today', singleDate, startDate, endDate);
+      applyFilters(txData || [], 'today', singleDate, startDate, endDate);
     }
     setLoading(false);
   };
 
-  const applyFilters = (transactions: any[], sharePercentage: number, type: string, sDate: string, sStart: string, sEnd: string) => {
+  const applyFilters = (transactions: any[], type: string, sDate: string, sStart: string, sEnd: string) => {
     let filtered = transactions;
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     if (type === 'today') {
-      filtered = transactions.filter(t => { const c = new Date(t.created_at); return t.status === 'completed' && c >= todayStart; });
+      filtered = transactions.filter(t => { const c = new Date(t.created_at); return ['completed', 'paid', 'active'].includes(t.status) && c >= todayStart; });
     } else if (type === 'date' && sDate) {
       const sd = new Date(sDate); sd.setHours(0,0,0,0); const nd = new Date(sd); nd.setDate(nd.getDate()+1);
-      filtered = transactions.filter(t => { const c = new Date(t.created_at); return t.status === 'completed' && c >= sd && c < nd; });
+      filtered = transactions.filter(t => { const c = new Date(t.created_at); return ['completed', 'paid', 'active'].includes(t.status) && c >= sd && c < nd; });
     } else if (type === 'range' && sStart && sEnd) {
       const st = new Date(sStart); st.setHours(0,0,0,0); const en = new Date(sEnd); en.setHours(23,59,59,999);
-      filtered = transactions.filter(t => { const c = new Date(t.created_at); return t.status === 'completed' && c >= st && c <= en; });
+      filtered = transactions.filter(t => { const c = new Date(t.created_at); return ['completed', 'paid', 'active'].includes(t.status) && c >= st && c <= en; });
     }
 
     setFilteredTransactions(filtered);
     let periodRevenue = 0;
-    filtered.forEach((tx: any) => { if (['completed','paid','active'].includes(tx.status)) periodRevenue += tx.amount_paid || 0; });
-    setPeriodStats({ revenue: periodRevenue, share: periodRevenue * (sharePercentage / 100) });
+    let periodOwnerShare = 0;
+    
+    filtered.forEach((tx: any) => { 
+      periodRevenue += tx.amount_paid || 0;
+      
+      // Calculate owner share dynamically based on ownership type
+      if (tx.owner_amount !== undefined && tx.owner_amount !== null) {
+        periodOwnerShare += Number(tx.owner_amount);
+      } else {
+        // Fallback for older transactions
+        const split = tx.power_bank_ownership_type === 'owner' ? 75 : (owner?.revenue_share_percentage || 40);
+        periodOwnerShare += (tx.amount_paid || 0) * (split / 100);
+      }
+    });
+    
+    setPeriodStats({ revenue: periodRevenue, share: periodOwnerShare });
   };
 
-  useEffect(() => { if (allTransactions.length > 0 && owner) applyFilters(allTransactions, owner.revenue_share_percentage || 30, filterType, singleDate, startDate, endDate); }, [filterType, singleDate, startDate, endDate]);
+  useEffect(() => { 
+    if (allTransactions.length > 0 && owner) {
+      applyFilters(allTransactions, filterType, singleDate, startDate, endDate); 
+    }
+  }, [filterType, singleDate, startDate, endDate, allTransactions, owner]);
 
   const handleGoToPB = () => { if (scanCode) window.location.href = `/staff/pb?code=${scanCode}`; };
   const handleLogout = async () => { await supabase.auth.signOut(); router.push('/auth/login'); };
 
-  // ✅ UPDATED: Graceful Fallback for Bank Verification
   const handleUpdateBank = async () => {
     if (!tempBankCode || !tempAccountNumber || tempAccountNumber.length !== 10) {
       setBankMessage('❌ Please select a valid bank and enter a 10-digit account number.');
@@ -162,13 +178,11 @@ export default function OwnerDashboard() {
         isSuccess = true;
         setBankMessage('✅ Bank verified & linked to Paystack!');
       } else {
-        // FALLBACK: Save the bank details anyway, but warn the user
         console.warn("Paystack verification failed:", data);
         setBankMessage('⚠️ Bank details saved locally. Paystack verification pending (manual review may be required).');
-        isSuccess = true; // We still consider it a success for saving to DB
+        isSuccess = true;
       }
 
-      // ALWAYS save to database if validation passed
       const { error } = await supabase.from('location_owners').update({ 
         bank_name: banks.find(b=>b.code===tempBankCode)?.name, 
         account_number: tempAccountNumber, 
@@ -209,7 +223,7 @@ export default function OwnerDashboard() {
       <p style={{color:'#64748b',marginTop:'-15px',marginBottom:'25px'}}>Welcome, {owner.business_name}</p>
 
       {/* Live Rental Timers */}
-      <h3 style={{marginBottom:'10px'}}>️ Active Rentals (Live Timer)</h3>
+      <h3 style={{marginBottom:'10px'}}>🔋 Active Rentals (Live Timer)</h3>
       {activeRentals.length===0 ? (
         <div style={{padding:'15px',backgroundColor:'#f8fafc',borderRadius:'8px',textAlign:'center',color:'#64748b',marginBottom:'25px',border:'1px dashed #cbd5e1'}}>No power banks currently rented out.</div>
       ) : (
@@ -226,8 +240,8 @@ export default function OwnerDashboard() {
       {/* Revenue Card */}
       <div style={{backgroundColor:'#10b981',padding:'25px',borderRadius:'12px',marginBottom:'25px',color:'white',textAlign:'center'}}>
         <p style={{margin:'0 0 10px',fontSize:'14px',opacity:0.9}}>{getFilterLabel()}</p>
-        <p style={{margin:'0 0 5px',fontSize:'12px',opacity:0.9}}>({owner.revenue_share_percentage}% Share)</p>
-        <h2 style={{margin:'0 0 10px',fontSize:'36px',fontWeight:'bold'}}>₦{periodStats.share.toLocaleString()}</h2>
+        <p style={{margin:'0 0 5px',fontSize:'12px',opacity:0.9}}>Your Total Earnings</p>
+        <h2 style={{margin:'0 0 10px',fontSize:'36px',fontWeight:'bold'}}>₦{periodStats.share.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</h2>
         <p style={{margin:0,fontSize:'14px',opacity:0.9}}>Total Location Revenue: ₦{periodStats.revenue.toLocaleString()}</p>
       </div>
 
@@ -241,7 +255,7 @@ export default function OwnerDashboard() {
             <p style={{margin:'5px 0',fontSize:'14px',color:'#64748b'}}><strong>Bank:</strong> {owner.bank_name || 'Not set'}</p>
             <p style={{margin:'5px 0',fontSize:'14px',color:'#64748b'}}><strong>Account:</strong> {owner.account_number ? `****${owner.account_number.slice(-4)}` : 'Not set'}</p>
             <p style={{margin:'5px 0',fontSize:'12px',color:'#94a3b8'}}>Subaccount Code: {owner.paystack_subaccount_code ? `${owner.paystack_subaccount_code.slice(0,8)}...` : 'Not created yet'}</p>
-            <button onClick={()=>setIsEditingBank(true)} style={{marginTop:'10px',padding:'10px 20px',backgroundColor:'#2563eb',color:'white',border:'none',borderRadius:'6px',fontWeight:'bold',cursor:'pointer'}}>️ Update Bank Details</button>
+            <button onClick={()=>setIsEditingBank(true)} style={{marginTop:'10px',padding:'10px 20px',backgroundColor:'#2563eb',color:'white',border:'none',borderRadius:'6px',fontWeight:'bold',cursor:'pointer'}}>✏️ Update Bank Details</button>
           </div>
         ) : (
           <div>
@@ -283,12 +297,31 @@ export default function OwnerDashboard() {
       {filteredTransactions.length===0 ? (
         <div style={{padding:'30px',backgroundColor:'#f8fafc',borderRadius:'8px',textAlign:'center',color:'#64748b'}}>No transactions found for this period.</div>
       ) : (
-        filteredTransactions.map(tx=>(
-          <div key={tx.id} style={{padding:'15px',backgroundColor:'white',border:'1px solid #e2e8f0',borderRadius:'8px',marginBottom:'10px',display:'flex',justifyContent:'space-between'}}>
-            <div><p style={{margin:0,fontWeight:'bold',color:'#2563eb'}}>{tx.ticket_code}</p><p style={{margin:'5px 0 0',fontSize:'12px',color:'#64748b'}}>{formatDate(tx.created_at)}</p></div>
-            <div style={{textAlign:'right'}}><p style={{margin:0,fontWeight:'bold',color:'#10b981'}}>₦{tx.amount_paid}</p><span style={{display:'inline-block',padding:'4px 8px',borderRadius:'4px',fontSize:'11px',fontWeight:'bold',backgroundColor:tx.status==='completed'?'#dcfce7':'#dbeafe',color:tx.status==='completed'?'#15803d':'#1d4ed8'}}>{tx.status.toUpperCase()}</span></div>
-          </div>
-        ))
+        filteredTransactions.map(tx=>{
+          const split = tx.revenue_split_owner || (tx.power_bank_ownership_type === 'owner' ? 75 : (owner?.revenue_share_percentage || 40));
+          const ownerEarned = tx.owner_amount !== undefined ? Number(tx.owner_amount) : (tx.amount_paid || 0) * (split / 100);
+          
+          return (
+            <div key={tx.id} style={{padding:'15px',backgroundColor:'white',border:'1px solid #e2e8f0',borderRadius:'8px',marginBottom:'10px',display:'flex',flexDirection:'column',gap:'10px'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                <div>
+                  <p style={{margin:0,fontWeight:'bold',color:'#2563eb'}}>{tx.ticket_code}</p>
+                  <p style={{margin:'5px 0 0',fontSize:'12px',color:'#64748b'}}>{formatDate(tx.created_at)}</p>
+                </div>
+                <div style={{textAlign:'right'}}>
+                  <p style={{margin:0,fontWeight:'bold',color:'#10b981'}}>₦{(tx.amount_paid || 0).toLocaleString()}</p>
+                  <span style={{display:'inline-block',padding:'4px 8px',borderRadius:'4px',fontSize:'11px',fontWeight:'bold',backgroundColor:tx.status==='completed'?'#dcfce7':'#dbeafe',color:tx.status==='completed'?'#15803d':'#1d4ed8'}}>{tx.status.toUpperCase()}</span>
+                </div>
+              </div>
+              
+              {/* Revenue Split Breakdown */}
+              <div style={{marginTop:'5px',paddingTop:'10px',borderTop:'1px dashed #e2e8f0',fontSize:'13px',color:'#64748b',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span>Your Share ({split}%):</span>
+                <span style={{fontWeight:'bold',color:'#0f172a',fontSize:'15px'}}>₦{ownerEarned.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+              </div>
+            </div>
+          );
+        })
       )}
     </main>
   );
