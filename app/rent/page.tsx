@@ -23,7 +23,7 @@ const nigerianStates = [
   'Sokoto', 'Taraba', 'Yobe', 'Zamfara', 'FCT'
 ];
 
-// Major LGAs/Cities by State (Simplified for common areas)
+// Major LGAs/Cities by State
 const stateLGAs: Record<string, string[]> = {
   'Lagos': ['Ikeja', 'Surulere', 'Yaba', 'Ikorodu', 'Epe', 'Badagry', 'Mushin', 'Oshodi', 'Alimosho', 'Kosofe', 'Shomolu', 'Agege', 'Ajeromi-Ifelodun', 'Amuwo-Odofin', 'Apapa', 'Eti-Osa', 'Ifako-Ijaiye', 'Lagos Island', 'Lagos Mainland', 'Ojo'],
   'Abuja': ['Abuja Municipal', 'Gwagwalada', 'Kuje', 'Bwari', 'Abaji', 'Kwali'],
@@ -34,7 +34,12 @@ const stateLGAs: Record<string, string[]> = {
   'Delta': ['Warri', 'Uvwie', 'Udu', 'Okpe', 'Sapele', 'Ethiope East', 'Ethiope West', 'Ughelli North', 'Ughelli South', 'Bomadi'],
   'Edo': ['Benin City', 'Oredo', 'Egor', 'Uhunmwonde', 'Ovia North-East', 'Ovia South-West', 'Esan North-East', 'Esan South-East', 'Esan Central', 'Esan West'],
   'Ogun': ['Abeokuta North', 'Abeokuta South', 'Ado-Odo/Ota', 'Ewekoro', 'Ifo', 'Ijebu East', 'Ijebu North', 'Ijebu North-East', 'Ijebu Ode', 'Remo North'],
-  'Ondo': ['Akure North', 'Akure South', 'Ondo West', 'Ondo East', 'Ose', 'Okitipupa', 'Ilaje', 'Ile-Oluji/Okeigbo', 'Idanre', 'Ifedore'],
+  'Ondo': [
+    'Akoko North-East', 'Akoko North-West', 'Akoko South-East', 'Akoko South-West',
+    'Akure North', 'Akure South', 'Ese Odo', 'Idanre', 'Ifedore', 
+    'Ilaje', 'Ile Oluji/Okeigbo', 'Irele', 'Odigbo', 
+    'Okitipupa', 'Ondo East', 'Ondo West', 'Ose', 'Owo'
+  ],
   'Osun': ['Osogbo', 'Ede North', 'Ede South', 'Atakumosa East', 'Atakumosa West', 'Ife Central', 'Ife East', 'Ife North', 'Ife South', 'Egbedore'],
   'Kaduna': ['Kaduna North', 'Kaduna South', 'Igabi', 'Kaura', 'Sanga', 'Jema\'a', 'Anchau', 'Kachia', 'Kagarko', 'Kajuru'],
   'Katsina': ['Katsina', 'Daura', 'Funtua', 'Malumfashi', 'Mashi', 'Bindawa', 'Charanchi', 'Dandume', 'Danja', 'Dan Musa'],
@@ -258,7 +263,7 @@ export default function RentPage() {
             <form onSubmit={handlePayment}>
               {/* Search Section */}
               <div style={{ backgroundColor: '#f0f9ff', padding: '20px', borderRadius: '12px', border: '1px solid #bae6fd', marginBottom: '20px' }}>
-                <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#0369a1' }}>🔍 Find a Station</h3>
+                <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#0369a1' }}> Find a Station</h3>
                 
                 <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', fontSize: '14px' }}>State *</label>
                 <select 
