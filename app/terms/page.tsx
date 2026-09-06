@@ -21,7 +21,7 @@ export default function TermsPage() {
         <ul style={{ fontSize: '16px', color: '#475569', lineHeight: '1.8', paddingLeft: '20px', marginBottom: '15px' }}>
           <li>All payments are processed securely via Paystack</li><li>Payment is required upfront before rental</li><li>All fees are non-refundable unless the power bank is defective</li><li>Late return fees will be charged automatically</li>
         </ul>
-        <p style={{ fontSize: '16px', color: '#475569', lineHeight: '1.6' }}><strong>Pricing:</strong> 1 Hour - ₦100 | 3 Hours - ₦200 | 5 Hours - ₦300 | 24 Hours - ₦800</p>
+        <p style={{ fontSize: '16px', color: '#475569', lineHeight: '1.6' }}><strong>Pricing:</strong> 1 Hour - ₦100 | 3 Hours - ₦200 | 5 Hours - 300 | 24 Hours - ₦800</p>
       </div>
       <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
         <h2 style={{ fontSize: '24px', color: '#0f172a', marginBottom: '15px' }}>4. User Responsibilities</h2>
