@@ -1,31 +1,122 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
-export default function LogoutPage() {
-  const router = useRouter();
+const ADMIN_EMAIL = 'tvicglobal@gmail.com'; 
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    const performLogout = async () => {
-      await supabase.auth.signOut();
-      router.push('/auth/admin-login');
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        window.location.href = '/auth/admin-login';
+        return;
+      }
+
+      if (session.user.email !== ADMIN_EMAIL) {
+        const { data: owner } = await supabase
+          .from('location_owners')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .single();
+
+        if (owner) {
+          window.location.href = '/owner/dashboard';
+        } else {
+          window.location.href = '/';
+        }
+        return;
+      }
+
+      setIsAuthorized(true);
     };
-    performLogout();
-  }, [router]);
+
+    checkAuth();
+  }, []);
+
+  //  DIRECT LOGOUT FUNCTION
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/auth/admin-login';
+  };
+
+  if (!isAuthorized) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f8fafc' }}>
+        <p style={{ fontSize: '18px', color: '#64748b' }}>🔒 Verifying admin access...</p>
+      </div>
+    );
+  }
 
   return (
-    <main style={{ 
-      padding: '40px 20px', 
-      textAlign: 'center', 
-      fontFamily: 'sans-serif',
-      maxWidth: '400px',
-      margin: '0 auto'
-    }}>
-      <div style={{ fontSize: '48px', marginBottom: '20px' }}>👋</div>
-      <h1 style={{ fontSize: '24px', color: '#0f172a', marginBottom: '10px' }}>Logging out...</h1>
-      <p style={{ color: '#64748b' }}>Please wait while we sign you out securely.</p>
-    </main>
+    <>
+      {/* Admin Header Bar */}
+      <header style={{ 
+        backgroundColor: '#0f172a', 
+        color: 'white', 
+        padding: '15px 20px', 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+      }}>
+        <Link href="/admin/dashboard" style={{ 
+          color: 'white', 
+          textDecoration: 'none', 
+          fontSize: '18px', 
+          fontWeight: 'bold' 
+        }}>
+           OKcharge Admin
+        </Link>
+        
+        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+          <Link href="/admin/dashboard" style={{ 
+            color: '#94a3b8', 
+            textDecoration: 'none', 
+            fontSize: '14px' 
+          }}>
+            Dashboard
+          </Link>
+          <Link href="/admin/locations" style={{ 
+            color: '#94a3b8', 
+            textDecoration: 'none', 
+            fontSize: '14px' 
+          }}>
+            Locations
+          </Link>
+          <Link href="/admin/owners" style={{ 
+            color: '#94a3b8', 
+            textDecoration: 'none', 
+            fontSize: '14px' 
+          }}>
+            Owners
+          </Link>
+          
+          {/* 🚀 UPDATED LOGOUT BUTTON */}
+          <button 
+            onClick={handleLogout}
+            style={{ 
+              backgroundColor: '#ef4444', 
+              color: 'white', 
+              padding: '8px 16px', 
+              borderRadius: '6px', 
+              border: 'none',
+              fontSize: '14px', 
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            Logout
+          </button>
+        </div>
+      </header>
+
+      {children}
+    </>
   );
 }
