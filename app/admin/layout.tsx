@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
 
-// Your actual admin email address
 const ADMIN_EMAIL = 'tvicglobal@gmail.com'; 
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -11,18 +11,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     const checkAuth = async () => {
-      // 1. Check for active session
       const { data: { session } } = await supabase.auth.getSession();
 
-      // 2. If NO session, force hard redirect to the dedicated admin login page
       if (!session) {
         window.location.href = '/auth/admin-login';
         return;
       }
 
-      // 3. If session exists, check if it's the Admin
       if (session.user.email !== ADMIN_EMAIL) {
-        // Check if they are a location owner
         const { data: owner } = await supabase
           .from('location_owners')
           .select('id')
@@ -30,21 +26,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           .single();
 
         if (owner) {
-          window.location.href = '/owner/dashboard'; // Redirect owners to their own dashboard
+          window.location.href = '/owner/dashboard';
         } else {
-          window.location.href = '/'; // Kick out random/unauthorized users
+          window.location.href = '/';
         }
         return;
       }
 
-      // 4. If it is the admin, allow rendering
       setIsAuthorized(true);
     };
 
     checkAuth();
   }, []);
 
-  // Show loading screen while checking (prevents flashing the dashboard)
   if (!isAuthorized) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f8fafc' }}>
@@ -53,6 +47,64 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  // Only render the dashboard if authorized
-  return <>{children}</>;
+  return (
+    <>
+      {/* Admin Header Bar */}
+      <header style={{ 
+        backgroundColor: '#0f172a', 
+        color: 'white', 
+        padding: '15px 20px', 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+      }}>
+        <Link href="/admin/dashboard" style={{ 
+          color: 'white', 
+          textDecoration: 'none', 
+          fontSize: '18px', 
+          fontWeight: 'bold' 
+        }}>
+           OKcharge Admin
+        </Link>
+        
+        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+          <Link href="/admin/dashboard" style={{ 
+            color: '#94a3b8', 
+            textDecoration: 'none', 
+            fontSize: '14px' 
+          }}>
+            Dashboard
+          </Link>
+          <Link href="/admin/locations" style={{ 
+            color: '#94a3b8', 
+            textDecoration: 'none', 
+            fontSize: '14px' 
+          }}>
+            Locations
+          </Link>
+          <Link href="/admin/owners" style={{ 
+            color: '#94a3b8', 
+            textDecoration: 'none', 
+            fontSize: '14px' 
+          }}>
+            Owners
+          </Link>
+          <Link href="/admin/logout" style={{ 
+            backgroundColor: '#ef4444', 
+            color: 'white', 
+            padding: '8px 16px', 
+            borderRadius: '6px', 
+            textDecoration: 'none', 
+            fontSize: '14px', 
+            fontWeight: 'bold' 
+          }}>
+            Logout
+          </Link>
+        </div>
+      </header>
+
+      {children}
+    </>
+  );
 }
