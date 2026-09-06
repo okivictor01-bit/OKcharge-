@@ -43,6 +43,25 @@ function StaffPowerBankContent() {
     setLoading(false);
   };
 
+  const getOwnershipInfo = (ownershipType: string) => {
+    if (ownershipType === 'owner') {
+      return { 
+        label: 'Owner Owned', 
+        ownerShare: 75, 
+        platformShare: 25,
+        color: '#fef3c7',
+        textColor: '#92400e'
+      };
+    }
+    return { 
+      label: 'OKcharge Owned', 
+      ownerShare: 40, 
+      platformShare: 60,
+      color: '#dbeafe',
+      textColor: '#1e40af'
+    };
+  };
+
   const handleRentOut = async () => {
     if (!ticketCode) {
       setMessage('Please enter the customer\'s rental ticket code.');
@@ -58,17 +77,27 @@ function StaffPowerBankContent() {
       .single();
 
     if (rentalError || !rental) {
-      setMessage('Invalid or unpaid ticket code. Please check and try again.');
+      setMessage('❌ Invalid or unpaid ticket code. Please check and try again.');
       setLoading(false);
       return;
     }
+
+    // Calculate revenue split based on ownership type
+    const ownershipInfo = getOwnershipInfo(pbData.ownership_type || 'okcharge');
+    const ownerAmount = rental.amount_paid * (ownershipInfo.ownerShare / 100);
+    const platformAmount = rental.amount_paid * (ownershipInfo.platformShare / 100);
 
     const { error: updateError } = await supabase
       .from('rentals')
       .update({
         status: 'active',
         started_at: new Date().toISOString(),
-        power_bank_id: pbData.id
+        power_bank_id: pbData.id,
+        power_bank_ownership_type: pbData.ownership_type || 'okcharge',
+        revenue_split_owner: ownershipInfo.ownerShare,
+        revenue_split_platform: ownershipInfo.platformShare,
+        owner_amount: ownerAmount,
+        platform_amount: platformAmount
       })
       .eq('id', rental.id);
 
@@ -77,7 +106,7 @@ function StaffPowerBankContent() {
         .from('power_banks')
         .update({ status: 'rented' })
         .eq('id', pbData.id);
-      setMessage('✅ Success! Power bank rented out.');
+      setMessage(`✅ Success! Power bank rented out. Split: ${ownershipInfo.ownerShare}% Owner / ${ownershipInfo.platformShare}% Platform`);
       setTicketCode('');
       fetchData();
     } else {
@@ -107,7 +136,7 @@ function StaffPowerBankContent() {
       .eq('id', pbData.id);
 
     if (rentalError || pbError) {
-      setMessage(' Error completing return.');
+      setMessage('❌ Error completing return.');
     } else {
       setMessage('✅ Success! Power bank returned and is now available.');
       setActiveRental(null);
@@ -140,6 +169,8 @@ function StaffPowerBankContent() {
     }
   };
 
+  const ownershipInfo = getOwnershipInfo(pbData.ownership_type || 'okcharge');
+
   return (
     <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '500px', margin: '0 auto' }}>
       <div style={{ textAlign: 'center', marginBottom: '20px' }}>
@@ -158,6 +189,20 @@ function StaffPowerBankContent() {
           {pbData.status}
         </span>
         <p style={{ color: '#64748b', marginTop: '10px', fontSize: '16px' }}>📍 {pbData.locations?.name}</p>
+        
+        {/* Ownership Badge */}
+        <div style={{
+          display: 'inline-block',
+          marginTop: '10px',
+          padding: '6px 16px',
+          borderRadius: '12px',
+          backgroundColor: ownershipInfo.color,
+          color: ownershipInfo.textColor,
+          fontWeight: 'bold',
+          fontSize: '12px'
+        }}>
+          {ownershipInfo.label} ({ownershipInfo.ownerShare}/{ownershipInfo.platformShare} Split)
+        </div>
       </div>
 
       {message && (
@@ -203,6 +248,25 @@ function StaffPowerBankContent() {
               <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#64748b' }}>
                 {activeRental.customer_name || 'Customer'} • {activeRental.duration_hours || '?'} hrs
               </p>
+              
+              {/* Show Revenue Split */}
+              {activeRental.power_bank_ownership_type && (
+                <div style={{ 
+                  marginTop: '10px', 
+                  padding: '10px', 
+                  backgroundColor: 'white', 
+                  borderRadius: '6px',
+                  fontSize: '12px'
+                }}>
+                  <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', color: '#0f172a' }}>Revenue Split:</p>
+                  <p style={{ margin: '3px 0', color: '#10b981' }}>
+                    Owner ({activeRental.revenue_split_owner}%): ₦{activeRental.owner_amount?.toLocaleString()}
+                  </p>
+                  <p style={{ margin: '3px 0', color: '#2563eb' }}>
+                    Platform ({activeRental.revenue_split_platform}%): {activeRental.platform_amount?.toLocaleString()}
+                  </p>
+                </div>
+              )}
             </div>
           )}
           <button
@@ -217,7 +281,7 @@ function StaffPowerBankContent() {
             disabled={loading}
             style={{ width: '100%', padding: '15px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}
           >
-            ⚠️ Report Damage
+            ️ Report Damage
           </button>
           <button
             onClick={() => handleStatusChange('lost')}
