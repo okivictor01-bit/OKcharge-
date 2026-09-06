@@ -96,6 +96,23 @@ export default function AdminDashboard() {
 
   const maxChartRevenue = Math.max(...chartData.map(d => d.revenue), 1000);
 
+  const navButtonStyle: React.CSSProperties = {
+    display: 'block',
+    width: '100%',
+    padding: '15px 20px',
+    marginBottom: '10px',
+    backgroundColor: 'white',
+    border: '1px solid #e2e8f0',
+    borderRadius: '10px',
+    textDecoration: 'none',
+    color: '#0f172a',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    textAlign: 'left' as const,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+    boxSizing: 'border-box'
+  };
+
   return (
     <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '800px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
@@ -106,9 +123,35 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {/* Quick Navigation */}
+      <div style={{ marginBottom: '25px' }}>
+        <h2 style={{ fontSize: '18px', marginBottom: '12px', color: '#475569' }}>Quick Actions</h2>
+        
+        <a href="/admin/locations" style={navButtonStyle}>
+           Manage Locations <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>{stats.totalLocations} total →</span>
+        </a>
+        
+        <a href="/admin/owners" style={navButtonStyle}>
+           Manage Owners <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>→</span>
+        </a>
+
+        <a href="/admin/powerbanks" style={navButtonStyle}>
+          🔋 Add Power Bank <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>{stats.availablePowerBanks} available →</span>
+        </a>
+
+        {/*  NEW PRINT QR LINK */}
+        <a href="/admin/print-qr" style={navButtonStyle}>
+          🖨️ Print QR Codes <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>→</span>
+        </a>
+
+        <a href="/staff" style={navButtonStyle}>
+           Staff Dashboard <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>→</span>
+        </a>
+      </div>
+
       {/* 7-Day Analytics Chart */}
       <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '25px' }}>
-        <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>📈 Revenue Trend (Last 7 Days)</h2>
+        <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}> Revenue Trend (Last 7 Days)</h2>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '150px', gap: '10px' }}>
           {chartData.map((data, idx) => (
             <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%' }}>
