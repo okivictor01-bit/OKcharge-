@@ -9,7 +9,7 @@ export default function Home() {
   return (
     <main style={{ fontFamily: 'sans-serif', color: '#0f172a', backgroundColor: '#ffffff' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2563eb' }}> OKcharge</div>
+        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2563eb' }}>⚡ OKcharge</div>
         <div><a href="/auth/login" style={{ textDecoration: 'none', color: '#475569', fontSize: '14px', fontWeight: 'bold' }}>Partner Login</a></div>
       </header>
 
@@ -51,7 +51,17 @@ export default function Home() {
       <section style={{ backgroundColor: '#0f172a', color: 'white', padding: '60px 20px', textAlign: 'center' }}>
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>
           <h2 style={{ fontSize: '28px', marginBottom: '15px' }}>Own a Business Location?</h2>
-          <p style={{ color: '#94a3b8', marginBottom: '30px', fontSize: '16px' }}>Partner with OKcharge and earn a 30% revenue share on every rental made at your location. We handle the hardware and maintenance.</p>
+          <p style={{ color: '#94a3b8', marginBottom: '30px', fontSize: '16px' }}>Partner with OKcharge and earn up to <strong>75% revenue share</strong> on every rental made at your location. We handle the hardware and maintenance.</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px', textAlign: 'left' }}>
+            <div style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '20px', borderRadius: '8px' }}>
+              <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#10b981' }}>Standard Partnership</h3>
+              <p style={{ margin: 0, fontSize: '14px', color: '#d1d5db' }}>We provide the power banks<br/>You earn <strong>40%</strong></p>
+            </div>
+            <div style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '20px', borderRadius: '8px' }}>
+              <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#10b981' }}>Owner Partnership</h3>
+              <p style={{ margin: 0, fontSize: '14px', color: '#d1d5db' }}>You provide your own power banks<br/>You earn <strong>75%</strong></p>
+            </div>
+          </div>
           <a href="/auth/register" style={{ display: 'inline-block', backgroundColor: 'white', color: '#0f172a', padding: '15px 30px', borderRadius: '8px', textDecoration: 'none', fontWeight: 'bold' }}>Become a Partner</a>
         </div>
       </section>
