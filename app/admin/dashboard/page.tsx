@@ -6,7 +6,16 @@ import { useRouter } from 'next/navigation';
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [stats, setStats] = useState({ totalRevenue: 0, activeRentals: 0, totalLocations: 0, totalPowerBanks: 0, availablePowerBanks: 0 });
+  const [stats, setStats] = useState({ 
+    totalRevenue: 0, 
+    activeRentals: 0, 
+    totalLocations: 0, 
+    totalPowerBanks: 0, 
+    availablePowerBanks: 0,
+    platformShare: 0,
+    okchargeOwnedPB: 0,
+    ownerOwnedPB: 0
+  });
   const [allTransactions, setAllTransactions] = useState<any[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,13 +40,27 @@ export default function AdminDashboard() {
   const fetchDashboardData = async () => {
     setLoading(true);
     const { count: locationsCount } = await supabase.from('locations').select('*', { count: 'exact', head: true });
-    const { data: pbData } = await supabase.from('power_banks').select('status');
-    const { data: rentalsData } = await supabase.from('rentals').select('amount_paid, status, ticket_code, customer_name, created_at, locations(name)').order('created_at', { ascending: false });
+    const { data: pbData } = await supabase.from('power_banks').select('status, ownership_type');
+    const { data: rentalsData } = await supabase
+      .from('rentals')
+      .select('amount_paid, status, ticket_code, customer_name, created_at, locations(name), power_bank_ownership_type, platform_amount')
+      .order('created_at', { ascending: false });
 
     const totalPB = pbData?.length || 0;
     const availablePB = pbData?.filter((pb: any) => pb.status === 'available').length || 0;
+    const okchargeOwnedPB = pbData?.filter((pb: any) => pb.ownership_type === 'okcharge').length || 0;
+    const ownerOwnedPB = pbData?.filter((pb: any) => pb.ownership_type === 'owner').length || 0;
     
-    setStats({ totalRevenue: 0, activeRentals: 0, totalLocations: locationsCount || 0, totalPowerBanks: totalPB, availablePowerBanks: availablePB });
+    setStats({ 
+      totalRevenue: 0, 
+      activeRentals: 0, 
+      totalLocations: locationsCount || 0, 
+      totalPowerBanks: totalPB, 
+      availablePowerBanks: availablePB,
+      platformShare: 0,
+      okchargeOwnedPB,
+      ownerOwnedPB
+    });
     setAllTransactions(rentalsData || []);
     
     generateChartData(rentalsData || []);
@@ -55,7 +78,16 @@ export default function AdminDashboard() {
     const chart = last7Days.map(date => {
       const dayRevenue = transactions
         .filter((t: any) => t.created_at.startsWith(date) && ['completed', 'paid', 'active'].includes(t.status))
-        .reduce((sum: number, t: any) => sum + (t.amount_paid || 0), 0);
+        .reduce((sum: number, t: any) => {
+          let share = 0;
+          if (t.platform_amount !== undefined && t.platform_amount !== null) {
+            share = Number(t.platform_amount);
+          } else {
+            const split = t.power_bank_ownership_type === 'owner' ? 25 : 60;
+            share = (t.amount_paid || 0) * (split / 100);
+          }
+          return sum + share;
+        }, 0);
       
       const dayName = new Date(date).toLocaleDateString('en-NG', { weekday: 'short' });
       return { day: dayName, revenue: dayRevenue, fullDate: date };
@@ -79,18 +111,34 @@ export default function AdminDashboard() {
     }
 
     setFilteredTransactions(filtered);
-    let periodRevenue = 0, periodActive = 0;
+    let periodRevenue = 0, periodActive = 0, periodPlatformShare = 0;
+    
     filtered.forEach((t: any) => {
-      if (['paid', 'active', 'completed'].includes(t.status)) periodRevenue += t.amount_paid || 0;
+      if (['paid', 'active', 'completed'].includes(t.status)) {
+        periodRevenue += t.amount_paid || 0;
+        
+        if (t.platform_amount !== undefined && t.platform_amount !== null) {
+          periodPlatformShare += Number(t.platform_amount);
+        } else {
+          const split = t.power_bank_ownership_type === 'owner' ? 25 : 60;
+          periodPlatformShare += (t.amount_paid || 0) * (split / 100);
+        }
+      }
       if (t.status === 'active') periodActive += 1;
     });
-    setStats(prev => ({ ...prev, totalRevenue: periodRevenue, activeRentals: periodActive }));
+    
+    setStats(prev => ({ 
+      ...prev, 
+      totalRevenue: periodRevenue, 
+      activeRentals: periodActive,
+      platformShare: periodPlatformShare
+    }));
   };
 
   useEffect(() => { if (allTransactions.length > 0) applyFilters(allTransactions); }, [filterType, singleDate, startDate, endDate]);
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('en-NG', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-  const getFilterLabel = () => filterType === 'today' ? "Today's Revenue" : filterType === 'date' ? `Revenue for ${singleDate}` : `Revenue (${startDate} to ${endDate})`;
+  const getFilterLabel = () => filterType === 'today' ? "Today's Earnings" : filterType === 'date' ? `Earnings for ${singleDate}` : `Earnings (${startDate} to ${endDate})`;
 
   if (loading) return <main style={{ padding: '20px', textAlign: 'center' }}>Loading dashboard data...</main>;
 
@@ -114,7 +162,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '800px', margin: '0 auto' }}>
+    <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '900px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
         <h1 style={{ fontSize: '24px', margin: 0 }}>Admin Dashboard</h1>
         <div style={{ display: 'flex', gap: '10px' }}>
@@ -126,32 +174,15 @@ export default function AdminDashboard() {
       {/* Quick Navigation */}
       <div style={{ marginBottom: '25px' }}>
         <h2 style={{ fontSize: '18px', marginBottom: '12px', color: '#475569' }}>Quick Actions</h2>
-        
-        <a href="/admin/locations" style={navButtonStyle}>
-           Manage Locations <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>{stats.totalLocations} total →</span>
-        </a>
-        
-        <a href="/admin/owners" style={navButtonStyle}>
-           Manage Owners <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>→</span>
-        </a>
-
-        <a href="/admin/powerbanks" style={navButtonStyle}>
-          🔋 Add Power Bank <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>{stats.availablePowerBanks} available →</span>
-        </a>
-
-        {/*  NEW PRINT QR LINK */}
-        <a href="/admin/print-qr" style={navButtonStyle}>
-          🖨️ Print QR Codes <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>→</span>
-        </a>
-
-        <a href="/staff" style={navButtonStyle}>
-           Staff Dashboard <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>→</span>
-        </a>
+        <a href="/admin/locations" style={navButtonStyle}>📍 Manage Locations <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>{stats.totalLocations} total →</span></a>
+        <a href="/admin/owners" style={navButtonStyle}>👤 Manage Owners <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>→</span></a>
+        <a href="/admin/powerbanks" style={navButtonStyle}>🔋 Manage Power Banks <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>{stats.okchargeOwnedPB} OKcharge / {stats.ownerOwnedPB} Owner →</span></a>
+        <a href="/admin/print-qr" style={navButtonStyle}>🖨️ Print QR Codes <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>→</span></a>
       </div>
 
-      {/* 7-Day Analytics Chart */}
+      {/* 7-Day Analytics Chart (Shows Platform Earnings) */}
       <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '25px' }}>
-        <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}> Revenue Trend (Last 7 Days)</h2>
+        <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>📈 Platform Revenue Trend (Last 7 Days)</h2>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '150px', gap: '10px' }}>
           {chartData.map((data, idx) => (
             <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%' }}>
@@ -159,7 +190,7 @@ export default function AdminDashboard() {
               <div style={{ 
                 width: '100%', 
                 maxWidth: '40px', 
-                backgroundColor: '#3b82f6', 
+                backgroundColor: '#10b981', 
                 borderRadius: '4px 4px 0 0', 
                 height: `${Math.max((data.revenue / maxChartRevenue) * 100, 2)}%`,
                 transition: 'height 0.5s ease'
@@ -171,22 +202,23 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px', marginBottom: '30px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px', marginBottom: '30px' }}>
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', borderLeft: '4px solid #10b981', textAlign: 'center' }}>
           <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#64748b' }}>{getFilterLabel()}</p>
-          <h2 style={{ margin: 0, fontSize: '24px', color: '#0f172a' }}>₦{stats.totalRevenue.toLocaleString()}</h2>
+          <h2 style={{ margin: 0, fontSize: '24px', color: '#0f172a' }}>₦{stats.platformShare.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</h2>
+          <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#10b981', fontWeight: 'bold' }}>Platform Share</p>
         </div>
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', borderLeft: '4px solid #3b82f6', textAlign: 'center' }}>
+          <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#64748b' }}>Total Gross Revenue</p>
+          <h2 style={{ margin: 0, fontSize: '24px', color: '#0f172a' }}>₦{stats.totalRevenue.toLocaleString()}</h2>
+        </div>
+        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', borderLeft: '4px solid #8b5cf6', textAlign: 'center' }}>
           <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#64748b' }}>Active Rentals</p>
           <h2 style={{ margin: 0, fontSize: '24px', color: '#0f172a' }}>{stats.activeRentals}</h2>
         </div>
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', borderLeft: '4px solid #8b5cf6', textAlign: 'center' }}>
+        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', borderLeft: '4px solid #f59e0b', textAlign: 'center' }}>
           <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#64748b' }}>Total Locations</p>
           <h2 style={{ margin: 0, fontSize: '24px', color: '#0f172a' }}>{stats.totalLocations}</h2>
-        </div>
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', borderLeft: '4px solid #f59e0b', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#64748b' }}>Available PBs</p>
-          <h2 style={{ margin: 0, fontSize: '24px', color: '#0f172a' }}>{stats.availablePowerBanks} <span style={{fontSize: '14px', color: '#94a3b8'}}>/ {stats.totalPowerBanks}</span></h2>
         </div>
       </div>
 
@@ -216,22 +248,37 @@ export default function AdminDashboard() {
                   <th style={{ padding: '12px 15px', textAlign: 'left', color: '#64748b', fontWeight: '600' }}>Ticket</th>
                   <th style={{ padding: '12px 15px', textAlign: 'left', color: '#64748b', fontWeight: '600' }}>Customer</th>
                   <th style={{ padding: '12px 15px', textAlign: 'left', color: '#64748b', fontWeight: '600' }}>Location</th>
-                  <th style={{ padding: '12px 15px', textAlign: 'left', color: '#64748b', fontWeight: '600' }}>Amount</th>
+                  <th style={{ padding: '12px 15px', textAlign: 'left', color: '#64748b', fontWeight: '600' }}>Total Amount</th>
+                  <th style={{ padding: '12px 15px', textAlign: 'left', color: '#64748b', fontWeight: '600' }}>Platform Share</th>
                   <th style={{ padding: '12px 15px', textAlign: 'left', color: '#64748b', fontWeight: '600' }}>Status</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredTransactions.map((tx: any) => (
-                  <tr key={tx.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '12px 15px', fontWeight: 'bold', color: '#2563eb' }}>{tx.ticket_code}</td>
-                    <td style={{ padding: '12px 15px' }}><div>{tx.customer_name || 'N/A'}</div><div style={{ fontSize: '12px', color: '#94a3b8' }}>{formatDate(tx.created_at)}</div></td>
-                    <td style={{ padding: '12px 15px', color: '#475569' }}>{tx.locations?.name || 'N/A'}</td>
-                    <td style={{ padding: '12px 15px', fontWeight: 'bold' }}>₦{tx.amount_paid?.toLocaleString()}</td>
-                    <td style={{ padding: '12px 15px' }}>
-                      <span style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', backgroundColor: tx.status === 'completed' ? '#dcfce7' : tx.status === 'active' ? '#dbeafe' : '#fee2e2', color: tx.status === 'completed' ? '#15803d' : tx.status === 'active' ? '#1d4ed8' : '#b91c1c' }}>{tx.status.toUpperCase()}</span>
-                    </td>
-                  </tr>
-                ))}
+                {filteredTransactions.map((tx: any) => {
+                  const split = tx.power_bank_ownership_type === 'owner' ? 25 : 60;
+                  const platformAmt = tx.platform_amount !== undefined ? Number(tx.platform_amount) : (tx.amount_paid || 0) * (split / 100);
+                  
+                  return (
+                    <tr key={tx.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '12px 15px', fontWeight: 'bold', color: '#2563eb' }}>{tx.ticket_code}</td>
+                      <td style={{ padding: '12px 15px' }}>
+                        <div>{tx.customer_name || 'N/A'}</div>
+                        <div style={{ fontSize: '12px', color: '#94a3b8' }}>{formatDate(tx.created_at)}</div>
+                      </td>
+                      <td style={{ padding: '12px 15px', color: '#475569' }}>{tx.locations?.name || 'N/A'}</td>
+                      <td style={{ padding: '12px 15px', fontWeight: 'bold' }}>₦{(tx.amount_paid || 0).toLocaleString()}</td>
+                      <td style={{ padding: '12px 15px', color: '#0f172a', fontWeight: 'bold' }}>
+                        ₦{platformAmt.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                        <div style={{fontSize: '11px', color: '#64748b', fontWeight: 'normal'}}>
+                          ({split}% • {tx.power_bank_ownership_type === 'owner' ? 'Owner PB' : 'OKcharge PB'})
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px 15px' }}>
+                        <span style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', backgroundColor: tx.status === 'completed' ? '#dcfce7' : tx.status === 'active' ? '#dbeafe' : '#fee2e2', color: tx.status === 'completed' ? '#15803d' : tx.status === 'active' ? '#1d4ed8' : '#b91c1c' }}>{tx.status.toUpperCase()}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
