@@ -14,6 +14,56 @@ interface Location {
   subaccount_code: string | null;
 }
 
+// Nigerian States
+const nigerianStates = [
+  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno',
+  'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'Gombe', 'Imo',
+  'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara', 'Lagos',
+  'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau', 'Rivers',
+  'Sokoto', 'Taraba', 'Yobe', 'Zamfara', 'FCT'
+];
+
+// Major LGAs/Cities by State (Simplified for common areas)
+const stateLGAs: Record<string, string[]> = {
+  'Lagos': ['Ikeja', 'Surulere', 'Yaba', 'Ikorodu', 'Epe', 'Badagry', 'Mushin', 'Oshodi', 'Alimosho', 'Kosofe', 'Shomolu', 'Agege', 'Ajeromi-Ifelodun', 'Amuwo-Odofin', 'Apapa', 'Eti-Osa', 'Ifako-Ijaiye', 'Lagos Island', 'Lagos Mainland', 'Ojo'],
+  'Abuja': ['Abuja Municipal', 'Gwagwalada', 'Kuje', 'Bwari', 'Abaji', 'Kwali'],
+  'FCT': ['Abuja Municipal', 'Gwagwalada', 'Kuje', 'Bwari', 'Abaji', 'Kwali'],
+  'Rivers': ['Port Harcourt', 'Obio-Akpor', 'Okrika', 'Ogu-Bolo', 'Eleme', 'Tai', 'Gokana', 'Khana', 'Asari-Toru', 'Akuku-Toru'],
+  'Kano': ['Kano Municipal', 'Fagge', 'Dala', 'Gwale', 'Tarauni', 'Nassarawa', 'Kumbotso', 'Ungogo', 'Kura', 'Madobi'],
+  'Oyo': ['Ibadan North', 'Ibadan South-West', 'Ibadan South-East', 'Ibadan North-East', 'Ibadan North-West', 'Egbeda', 'Akinyele', 'Oluyole', 'Ona-Ara', 'Lagelu'],
+  'Delta': ['Warri', 'Uvwie', 'Udu', 'Okpe', 'Sapele', 'Ethiope East', 'Ethiope West', 'Ughelli North', 'Ughelli South', 'Bomadi'],
+  'Edo': ['Benin City', 'Oredo', 'Egor', 'Uhunmwonde', 'Ovia North-East', 'Ovia South-West', 'Esan North-East', 'Esan South-East', 'Esan Central', 'Esan West'],
+  'Ogun': ['Abeokuta North', 'Abeokuta South', 'Ado-Odo/Ota', 'Ewekoro', 'Ifo', 'Ijebu East', 'Ijebu North', 'Ijebu North-East', 'Ijebu Ode', 'Remo North'],
+  'Ondo': ['Akure North', 'Akure South', 'Ondo West', 'Ondo East', 'Ose', 'Okitipupa', 'Ilaje', 'Ile-Oluji/Okeigbo', 'Idanre', 'Ifedore'],
+  'Osun': ['Osogbo', 'Ede North', 'Ede South', 'Atakumosa East', 'Atakumosa West', 'Ife Central', 'Ife East', 'Ife North', 'Ife South', 'Egbedore'],
+  'Kaduna': ['Kaduna North', 'Kaduna South', 'Igabi', 'Kaura', 'Sanga', 'Jema\'a', 'Anchau', 'Kachia', 'Kagarko', 'Kajuru'],
+  'Katsina': ['Katsina', 'Daura', 'Funtua', 'Malumfashi', 'Mashi', 'Bindawa', 'Charanchi', 'Dandume', 'Danja', 'Dan Musa'],
+  'Sokoto': ['Sokoto North', 'Sokoto South', 'Tambuwal', 'Tangaza', 'Gudu', 'Wurno', 'Illela', 'Binji', 'Kebbe', 'Shagari'],
+  'Kwara': ['Ilorin East', 'Ilorin South', 'Ilorin West', 'Asa', 'Baruten', 'Edu', 'Ekiti', 'Ifelodun', 'Irepodun', 'Isin'],
+  'Enugu': ['Enugu East', 'Enugu North', 'Enugu South', 'Awgu', 'Aninri', 'Nkanu East', 'Nkanu West', 'Udi', 'Oji River', 'Ezeagu'],
+  'Anambra': ['Awka North', 'Awka South', 'Onitsha North', 'Onitsha South', 'Nnewi North', 'Nnewi South', 'Ekwusigo', 'Idemili North', 'Idemili South', 'Ogbaru'],
+  'Imo': ['Owerri Municipal', 'Owerri North', 'Owerri West', 'Aboh Mbaise', 'Ahiazu Mbaise', 'Ehime Mbano', 'Ezinihitte', 'Ideato North', 'Ideato South', 'Ihitte/Uboma'],
+  'Abia': ['Aba North', 'Aba South', 'Arochukwu', 'Bende', 'Ikwuano', 'Isiala Ngwa North', 'Isiala Ngwa South', 'Isuikwuato', 'Obi Ngwa', 'Ohafia'],
+  'Ebonyi': ['Abakaliki', 'Afikpo North', 'Afikpo South', 'Ebonyi', 'Ezza North', 'Ezza South', 'Ikwo', 'Ishielu', 'Ivo', 'Izzi'],
+  'Benue': ['Makurdi', 'Guma', 'Gwer East', 'Gwer West', 'Katsina-Ala', 'Konshisha', 'Kwande', 'Logo', 'Mbamtor', 'Ogbadibo'],
+  'Nasarawa': ['Lafia', 'Akwanga', 'Awe', 'Doma', 'Karu', 'Keana', 'Keffi', 'Kokona', 'Nasarawa', 'Nasarawa Egon'],
+  'Niger': ['Minna', 'Bida', 'Kontagora', 'Suleja', 'Bosso', 'Chanchaga', 'Mokwa', 'Agaie', 'Baro', 'Edati'],
+  'Plateau': ['Jos North', 'Jos South', 'Jos East', 'Bokkos', 'Barkin Ladi', 'Bassa', 'Kanam', 'Kanke', 'Langtang North', 'Langtang South'],
+  'Adamawa': ['Yola North', 'Yola South', 'Girei', 'Demsa', 'Fufore', 'Ganaye', 'Gombi', 'Guyuk', 'Hong', 'Jada'],
+  'Taraba': ['Jalingo', 'Ardo Kola', 'Bali', 'Donga', 'Gashaka', 'Gassol', 'Ibi', 'Karim Lamido', 'Lau', 'Sardauna'],
+  'Bauchi': ['Bauchi', 'Alkaleri', 'Bauchi', 'Bogoro', 'Damban', 'Darazo', 'Dass', 'Ganjuwa', 'Giade', 'Itas/Gadau'],
+  'Borno': ['Maiduguri', 'Askira/Uba', 'Bama', 'Bayo', 'Biu', 'Chibok', 'Damboa', 'Dikwa', 'Gubio', 'Guzamala'],
+  'Yobe': ['Damaturu', 'Bade', 'Bursari', 'Fika', 'Fune', 'Geidam', 'Gujba', 'Gulani', 'Jakusko', 'Karasuwa'],
+  'Gombe': ['Gombe', 'Akko', 'Balanga', 'Billiri', 'Dukku', 'Kaltungo', 'Kwami', 'Nafada', 'Shongom', 'Yamaltu/Deba'],
+  'Jigawa': ['Dutse', 'Auyo', 'Babura', 'Biriniwa', 'Birnin Kudu', 'Buji', 'Gagarawa', 'Garki', 'Gumel', 'Guri'],
+  'Kebbi': ['Birnin Kebbi', 'Aleiro', 'Arewa Dandi', 'Argungu', 'Augie', 'Bagudo', 'Dandi', 'Fakai', 'Gwandu', 'Jega'],
+  'Zamfara': ['Gusau', 'Anka', 'Bakura', 'Birnin Magaji/Kiyaw', 'Bukkuyum', 'Bungudu', 'Gummi', 'Gusau', 'Kaura Namoda', 'Maradun'],
+  'Bayelsa': ['Yenagoa', 'Brass', 'Ekeremor', 'Kolokuma/Opokuma', 'Nembe', 'Ogbia', 'Sagbama', 'Southern Ijaw'],
+  'Cross River': ['Calabar Municipal', 'Calabar South', 'Akamkpa', 'Akpabuyo', 'Bakassi', 'Biase', 'Boki', 'Etung', 'Ikom', 'Obanliku'],
+  'Akwa Ibom': ['Uyo', 'Abak', 'Eastern Obolo', 'Eket', 'Esit Eket', 'Essien Udim', 'Etim Ekpo', 'Etinan', 'Ibeno', 'Ibesikpo Asutan'],
+  'Oyo': ['Ibadan North', 'Ibadan South-West', 'Ibadan South-East', 'Ibadan North-East', 'Ibadan North-West', 'Egbeda', 'Akinyele', 'Oluyole', 'Ona-Ara', 'Lagelu']
+};
+
 export default function RentPage() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [filteredLocations, setFilteredLocations] = useState<Location[]>([]);
@@ -28,8 +78,9 @@ export default function RentPage() {
   
   // Search fields
   const [searchState, setSearchState] = useState('');
-  const [searchCity, setSearchCity] = useState('');
+  const [searchLGA, setSearchLGA] = useState('');
   const [searchTown, setSearchTown] = useState('');
+  const [availableLGAs, setAvailableLGAs] = useState<string[]>([]);
 
   const pricing: Record<string, number> = {
     '1': 100,
@@ -43,8 +94,18 @@ export default function RentPage() {
   }, []);
 
   useEffect(() => {
+    // Update LGAs when state changes
+    if (searchState && stateLGAs[searchState]) {
+      setAvailableLGAs(stateLGAs[searchState]);
+    } else {
+      setAvailableLGAs([]);
+      setSearchLGA('');
+    }
+  }, [searchState]);
+
+  useEffect(() => {
     filterLocations();
-  }, [searchState, searchCity, searchTown, locations]);
+  }, [searchState, searchLGA, searchTown, locations]);
 
   const fetchLocations = async () => {
     const { data } = await supabase
@@ -77,9 +138,10 @@ export default function RentPage() {
       );
     }
     
-    if (searchCity.trim()) {
+    if (searchLGA.trim()) {
       filtered = filtered.filter(loc => 
-        loc.city.toLowerCase().includes(searchCity.toLowerCase())
+        loc.city.toLowerCase().includes(searchLGA.toLowerCase()) ||
+        loc.address.toLowerCase().includes(searchLGA.toLowerCase())
       );
     }
     
@@ -91,13 +153,14 @@ export default function RentPage() {
     }
     
     setFilteredLocations(filtered);
-    setSelectedLocation(''); // Reset selection when filtering
+    setSelectedLocation('');
   };
 
   const clearSearch = () => {
     setSearchState('');
-    setSearchCity('');
+    setSearchLGA('');
     setSearchTown('');
+    setAvailableLGAs([]);
     setFilteredLocations(locations);
     setSelectedLocation('');
   };
@@ -196,36 +259,43 @@ export default function RentPage() {
             <form onSubmit={handlePayment}>
               {/* Search Section */}
               <div style={{ backgroundColor: '#f0f9ff', padding: '20px', borderRadius: '12px', border: '1px solid #bae6fd', marginBottom: '20px' }}>
-                <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#0369a1' }}> Find a Station</h3>
+                <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#0369a1' }}>🔍 Find a Station</h3>
                 
-                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', fontSize: '14px' }}>State</label>
-                <input 
-                  style={inputStyle} 
-                  type="text" 
-                  placeholder="e.g., Lagos" 
+                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', fontSize: '14px' }}>State *</label>
+                <select 
+                  style={inputStyle}
                   value={searchState}
                   onChange={(e) => setSearchState(e.target.value)}
-                />
+                >
+                  <option value="">Select State</option>
+                  {nigerianStates.map(state => (
+                    <option key={state} value={state}>{state}</option>
+                  ))}
+                </select>
 
-                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', fontSize: '14px' }}>City</label>
-                <input 
-                  style={inputStyle} 
-                  type="text" 
-                  placeholder="e.g., Ikeja" 
-                  value={searchCity}
-                  onChange={(e) => setSearchCity(e.target.value)}
-                />
+                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', fontSize: '14px' }}>Local Government (LGA) *</label>
+                <select 
+                  style={inputStyle}
+                  value={searchLGA}
+                  onChange={(e) => setSearchLGA(e.target.value)}
+                  disabled={!searchState}
+                >
+                  <option value="">Select LGA</option>
+                  {availableLGAs.map(lga => (
+                    <option key={lga} value={lga}>{lga}</option>
+                  ))}
+                </select>
 
                 <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', fontSize: '14px' }}>Town/Area</label>
                 <input 
                   style={inputStyle} 
                   type="text" 
-                  placeholder="e.g., Allen Avenue" 
+                  placeholder="e.g., Allen Avenue, Computer Village" 
                   value={searchTown}
                   onChange={(e) => setSearchTown(e.target.value)}
                 />
 
-                {(searchState || searchCity || searchTown) && (
+                {(searchState || searchLGA || searchTown) && (
                   <button 
                     type="button"
                     onClick={clearSearch}
@@ -264,10 +334,10 @@ export default function RentPage() {
 
               <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Rental Duration *</label>
               <select style={selectStyle} value={duration} onChange={(e) => setDuration(e.target.value)}>
-                <option value="1">1 hour - ₦100</option>
+                <option value="1">1 hour - 100</option>
                 <option value="3">3 hours - ₦200</option>
                 <option value="5">5 hours - ₦300</option>
-                <option value="24">24 hours - ₦800</option>
+                <option value="24">24 hours - 800</option>
               </select>
 
               <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Your Name *</label>
