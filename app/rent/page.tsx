@@ -8,11 +8,15 @@ interface Location {
   id: string;
   name: string;
   address: string;
+  state: string;
+  city: string;
+  town: string;
   subaccount_code: string | null;
 }
 
 export default function RentPage() {
   const [locations, setLocations] = useState<Location[]>([]);
+  const [filteredLocations, setFilteredLocations] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState('');
   const [duration, setDuration] = useState('1');
   const [customerName, setCustomerName] = useState('');
@@ -21,8 +25,12 @@ export default function RentPage() {
   const [ticket, setTicket] = useState('');
   const [error, setError] = useState('');
   const [paystackReady, setPaystackReady] = useState(false);
+  
+  // Search fields
+  const [searchState, setSearchState] = useState('');
+  const [searchCity, setSearchCity] = useState('');
+  const [searchTown, setSearchTown] = useState('');
 
-  // ✅ UPDATED PRICING
   const pricing: Record<string, number> = {
     '1': 100,
     '3': 200,
@@ -30,12 +38,18 @@ export default function RentPage() {
     '24': 800,
   };
 
-  useEffect(() => { fetchLocations(); }, []);
+  useEffect(() => { 
+    fetchLocations(); 
+  }, []);
+
+  useEffect(() => {
+    filterLocations();
+  }, [searchState, searchCity, searchTown, locations]);
 
   const fetchLocations = async () => {
     const { data } = await supabase
       .from('locations')
-      .select(`id, name, address, location_owners (paystack_subaccount_code)`)
+      .select(`id, name, address, state, city, town, location_owners (paystack_subaccount_code)`)
       .eq('status', 'active')
       .eq('is_visible_on_map', true);
     
@@ -44,10 +58,48 @@ export default function RentPage() {
         id: loc.id,
         name: loc.name,
         address: loc.address,
+        state: loc.state || '',
+        city: loc.city || '',
+        town: loc.town || '',
         subaccount_code: loc.location_owners?.paystack_subaccount_code || null
       }));
       setLocations(formattedData);
+      setFilteredLocations(formattedData);
     }
+  };
+
+  const filterLocations = () => {
+    let filtered = locations;
+    
+    if (searchState.trim()) {
+      filtered = filtered.filter(loc => 
+        loc.state.toLowerCase().includes(searchState.toLowerCase())
+      );
+    }
+    
+    if (searchCity.trim()) {
+      filtered = filtered.filter(loc => 
+        loc.city.toLowerCase().includes(searchCity.toLowerCase())
+      );
+    }
+    
+    if (searchTown.trim()) {
+      filtered = filtered.filter(loc => 
+        loc.town.toLowerCase().includes(searchTown.toLowerCase()) ||
+        loc.address.toLowerCase().includes(searchTown.toLowerCase())
+      );
+    }
+    
+    setFilteredLocations(filtered);
+    setSelectedLocation(''); // Reset selection when filtering
+  };
+
+  const clearSearch = () => {
+    setSearchState('');
+    setSearchCity('');
+    setSearchTown('');
+    setFilteredLocations(locations);
+    setSelectedLocation('');
   };
 
   const generateTicketCode = () => {
@@ -106,12 +158,13 @@ export default function RentPage() {
     setLoading(false);
   };
 
-  const inputStyle: React.CSSProperties = { width: '100%', padding: '15px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' };
+  const inputStyle: React.CSSProperties = { width: '100%', padding: '12px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' };
+  const selectStyle: React.CSSProperties = { width: '100%', padding: '15px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' };
 
   return (
     <>
       <Script src="https://js.paystack.co/v1/inline.js" strategy="afterInteractive" onLoad={() => setPaystackReady(true)} onError={() => setError('Payment system unavailable')} />
-      <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '500px', margin: '0 auto' }}>
+      <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '600px', margin: '0 auto' }}>
         {ticket ? (
           <div style={{ textAlign: 'center', padding: '20px' }}>
             <div style={{ fontSize: '64px', marginBottom: '20px' }}>✅</div>
@@ -136,29 +189,92 @@ export default function RentPage() {
         ) : (
           <>
             <h1 style={{ fontSize: '24px', marginBottom: '10px' }}>Rent a Power Bank</h1>
-            <p style={{ color: '#64748b', marginBottom: '30px' }}>Fill in your details and pay securely</p>
+            <p style={{ color: '#64748b', marginBottom: '30px' }}>Find a station and pay securely</p>
             {error && <div style={{ padding: '15px', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '20px' }}>{error}</div>}
             {!paystackReady && <div style={{ padding: '15px', backgroundColor: '#fff3cd', color: '#856404', borderRadius: '8px', marginBottom: '20px', textAlign: 'center' }}>Loading payment system...</div>}
+            
             <form onSubmit={handlePayment}>
+              {/* Search Section */}
+              <div style={{ backgroundColor: '#f0f9ff', padding: '20px', borderRadius: '12px', border: '1px solid #bae6fd', marginBottom: '20px' }}>
+                <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#0369a1' }}> Find a Station</h3>
+                
+                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', fontSize: '14px' }}>State</label>
+                <input 
+                  style={inputStyle} 
+                  type="text" 
+                  placeholder="e.g., Lagos" 
+                  value={searchState}
+                  onChange={(e) => setSearchState(e.target.value)}
+                />
+
+                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', fontSize: '14px' }}>City</label>
+                <input 
+                  style={inputStyle} 
+                  type="text" 
+                  placeholder="e.g., Ikeja" 
+                  value={searchCity}
+                  onChange={(e) => setSearchCity(e.target.value)}
+                />
+
+                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', fontSize: '14px' }}>Town/Area</label>
+                <input 
+                  style={inputStyle} 
+                  type="text" 
+                  placeholder="e.g., Allen Avenue" 
+                  value={searchTown}
+                  onChange={(e) => setSearchTown(e.target.value)}
+                />
+
+                {(searchState || searchCity || searchTown) && (
+                  <button 
+                    type="button"
+                    onClick={clearSearch}
+                    style={{ 
+                      width: '100%', 
+                      padding: '10px', 
+                      backgroundColor: '#f87171', 
+                      color: 'white', 
+                      border: 'none', 
+                      borderRadius: '6px', 
+                      fontSize: '14px', 
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      marginBottom: '10px'
+                    }}
+                  >
+                    Clear Search
+                  </button>
+                )}
+
+                <div style={{ fontSize: '13px', color: '#64748b', marginTop: '10px' }}>
+                  Found {filteredLocations.length} station{filteredLocations.length !== 1 ? 's' : ''}
+                </div>
+              </div>
+
+              {/* Location Selection */}
               <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Select Location *</label>
-              <select style={inputStyle} value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} required>
+              <select style={selectStyle} value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} required>
                 <option value="">-- Choose a location --</option>
-                {locations.map((loc) => (<option key={loc.id} value={loc.id}>{loc.name}</option>))}
+                {filteredLocations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.name} - {loc.address} {loc.city && `(${loc.city})`}
+                  </option>
+                ))}
               </select>
 
               <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Rental Duration *</label>
-              <select style={inputStyle} value={duration} onChange={(e) => setDuration(e.target.value)}>
+              <select style={selectStyle} value={duration} onChange={(e) => setDuration(e.target.value)}>
                 <option value="1">1 hour - ₦100</option>
-                <option value="3">3 hours - 200</option>
+                <option value="3">3 hours - ₦200</option>
                 <option value="5">5 hours - ₦300</option>
                 <option value="24">24 hours - ₦800</option>
               </select>
 
               <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Your Name *</label>
-              <input style={inputStyle} type="text" placeholder="e.g., John Doe" value={customerName} onChange={(e) => setCustomerName(e.target.value)} required />
+              <input style={selectStyle} type="text" placeholder="e.g., John Doe" value={customerName} onChange={(e) => setCustomerName(e.target.value)} required />
 
               <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Phone Number *</label>
-              <input style={inputStyle} type="tel" placeholder="e.g., 08012345678" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} required />
+              <input style={selectStyle} type="tel" placeholder="e.g., 08012345678" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} required />
 
               <div style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', marginBottom: '20px', textAlign: 'center' }}>
                 <p style={{ margin: '0', fontSize: '14px', color: '#64748b' }}>Total Amount</p>
