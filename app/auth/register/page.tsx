@@ -3,123 +3,85 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function RegisterPage() {
-  const [businessName, setBusinessName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState('');
-  const [bankCode, setBankCode] = useState('');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [bankWarning, setBankWarning] = useState('');
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [formData, setFormData] = useState({
+    business_name: '',
+    phone: '',
+    email: '',
+    password: '',
+    bank_name: '',
+    account_number: '',
+    partner_type: 'standard' // Default to standard
+  });
 
-  // Nigerian Banks List (Code - Name)
   const banks = [
     { code: '044', name: 'Access Bank' },
-    { code: '058', name: 'Guaranty Trust Bank (GTBank)' },
-    { code: '011', name: 'First Bank of Nigeria' },
-    { code: '033', name: 'United Bank for Africa (UBA)' },
+    { code: '058', name: 'GTBank' },
+    { code: '011', name: 'First Bank' },
+    { code: '033', name: 'UBA' },
     { code: '057', name: 'Zenith Bank' },
     { code: '070', name: 'Fidelity Bank' },
     { code: '032', name: 'Union Bank' },
     { code: '232', name: 'Sterling Bank' },
-    { code: '035', name: 'Wema Bank' },
-    { code: '076', name: 'Polaris Bank' },
-    { code: '030', name: 'Heritage Bank' },
-    { code: '050', name: 'Ecobank' },
-    { code: '082', name: 'Keystone Bank' },
-    { code: '101', name: 'Providus Bank' },
-    { code: '214', name: 'First City Monument Bank (FCMB)' },
-    { code: '084', name: 'Enterprise Bank' },
-    { code: '063', name: 'Access Bank (Diamond)' },
-    { code: '010', name: 'Citibank' },
-    { code: '042', name: 'FBNQuest Merchant Bank' },
-    { code: '090', name: 'Kuda Bank' },
-    { code: '090267', name: 'Opay' },
+    { code: '090267', name: 'Opay' }, 
     { code: '090288', name: 'PalmPay' },
+    { code: '50211', name: 'Kuda Bank' }, 
+    { code: '082', name: 'Keystone Bank' },
+    { code: '050', name: 'Ecobank' },
+    { code: '076', name: 'Polaris Bank' },
+    { code: '214', name: 'FCMB' },
   ];
 
   const handleRegister = async (e: any) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    setSuccess('');
-    setBankWarning('');
+    setMessage('');
 
-    if (!bankCode || !accountNumber) {
-      setError('Please select a bank and enter your account number');
+    if (formData.account_number.length !== 10) {
+      setMessage('❌ Account number must be 10 digits.');
       setLoading(false);
       return;
     }
 
-    // 1. Create the user in Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: email,
-      password: password,
-    });
+    try {
+      // 1. Create Auth User
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+      });
 
-    if (authError) {
-      setError(authError.message);
-      setLoading(false);
-      return;
-    }
+      if (authError) throw authError;
 
-    if (authData.user) {
-      let subaccountCode: string | null = null;
+      if (authData.user) {
+        // 2. Save Owner Details to Database
+        const { error: dbError } = await supabase
+          .from('location_owners')
+          .insert([
+            {
+              user_id: authData.user.id,
+              business_name: formData.business_name,
+              phone: formData.phone,
+              email: formData.email,
+              bank_name: formData.bank_name,
+              account_number: formData.account_number,
+              partner_type: formData.partner_type, // Save the partner type
+              revenue_share_percentage: formData.partner_type === 'owner' ? 75 : 40, // Auto-set percentage
+              created_at: new Date().toISOString()
+            }
+          ]);
 
-      // 2. Try to create Paystack Subaccount
-      try {
-        const supabaseUrl = 'https://zsjmudkesxrlrhtugdon.supabase.co';
-        const edgeFunctionUrl = `${supabaseUrl}/functions/v1/create-paystack-subaccount`;
+        if (dbError) throw dbError;
 
-        const res = await fetch(edgeFunctionUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            business_name: businessName,
-            bank_code: bankCode,
-            account_number: accountNumber,
-            percentage: 30
-          })
-        });
-
-        const data = await res.json();
-
-        if (data.success && data.subaccount_code) {
-          subaccountCode = data.subaccount_code;
-        } else {
-          setBankWarning('️ Account created, but bank verification failed. You can update your bank details later from your dashboard.');
-        }
-      } catch (err) {
-        setBankWarning('️ Could not verify bank account. You can update your bank details later from your dashboard.');
+        setMessage('✅ Registration successful! Please check your email to verify your account.');
+        setTimeout(() => router.push('/auth/login'), 3000);
       }
-
-      // 3. Save owner profile to database
-      const { error: dbError } = await supabase
-        .from('location_owners')
-        .insert([
-          {
-            user_id: authData.user.id,
-            business_name: businessName,
-            phone: phone,
-            revenue_share_percentage: 30,
-            bank_name: banks.find(b => b.code === bankCode)?.name || '',
-            account_number: accountNumber,
-            paystack_subaccount_code: subaccountCode,
-            status: 'pending'
-          }
-        ]);
-
-      if (dbError) {
-        setError('Account created, but failed to save business details: ' + dbError.message);
-      } else {
-        setSuccess('Registration successful! Please login.');
-        setTimeout(() => router.push('/auth/login'), 2000);
-      }
+    } catch (error: any) {
+      setMessage('❌ Error: ' + error.message);
     }
     setLoading(false);
   };
@@ -135,25 +97,22 @@ export default function RegisterPage() {
   };
 
   return (
-    <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '400px', margin: '0 auto', marginTop: '30px' }}>
-      <h1 style={{ fontSize: '24px', marginBottom: '10px', textAlign: 'center' }}>Partner Registration</h1>
-      <p style={{ color: '#64748b', marginBottom: '30px', textAlign: 'center' }}>Join OKcharge and start earning</p>
+    <main style={{ padding: '40px 20px', fontFamily: 'sans-serif', maxWidth: '500px', margin: '0 auto' }}>
+      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+        <h1 style={{ fontSize: '28px', color: '#0f172a', marginBottom: '10px' }}>Partner Registration</h1>
+        <p style={{ color: '#64748b' }}>Join OKcharge and start earning</p>
+      </div>
 
-      {error && (
-        <div style={{ padding: '15px', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '20px' }}>
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div style={{ padding: '15px', backgroundColor: '#dcfce7', color: '#15803d', borderRadius: '8px', marginBottom: '20px' }}>
-          {success}
-        </div>
-      )}
-
-      {bankWarning && (
-        <div style={{ padding: '15px', backgroundColor: '#fef3c7', color: '#92400e', borderRadius: '8px', marginBottom: '20px' }}>
-          {bankWarning}
+      {message && (
+        <div style={{
+          padding: '15px',
+          borderRadius: '8px',
+          marginBottom: '20px',
+          backgroundColor: message.includes('✅') ? '#dcfce7' : '#fee2e2',
+          color: message.includes('✅') ? '#15803d' : '#b91c1c',
+          textAlign: 'center'
+        }}>
+          {message}
         </div>
       )}
 
@@ -163,8 +122,8 @@ export default function RegisterPage() {
           style={inputStyle}
           type="text"
           placeholder="e.g., J&D Babies Store"
-          value={businessName}
-          onChange={(e) => setBusinessName(e.target.value)}
+          value={formData.business_name}
+          onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
           required
         />
 
@@ -173,8 +132,8 @@ export default function RegisterPage() {
           style={inputStyle}
           type="tel"
           placeholder="e.g., 08012345678"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          value={formData.phone}
+          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
           required
         />
 
@@ -183,8 +142,8 @@ export default function RegisterPage() {
           style={inputStyle}
           type="email"
           placeholder="you@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           required
         />
 
@@ -193,23 +152,71 @@ export default function RegisterPage() {
           style={inputStyle}
           type="password"
           placeholder="At least 6 characters"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          value={formData.password}
+          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           required
           minLength={6}
         />
 
+        {/*  NEW: Partner Type Selection */}
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>Partnership Type *</label>
+        <div style={{ display: 'grid', gap: '10px', marginBottom: '20px' }}>
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '15px',
+            border: formData.partner_type === 'standard' ? '2px solid #2563eb' : '1px solid #ddd',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            backgroundColor: formData.partner_type === 'standard' ? '#eff6ff' : 'white'
+          }}>
+            <input
+              type="radio"
+              name="partner_type"
+              value="standard"
+              checked={formData.partner_type === 'standard'}
+              onChange={(e) => setFormData({ ...formData, partner_type: e.target.value })}
+              style={{ marginRight: '15px', transform: 'scale(1.2)' }}
+            />
+            <div>
+              <div style={{ fontWeight: 'bold', color: '#0f172a' }}>Standard Partnership</div>
+              <div style={{ fontSize: '13px', color: '#64748b' }}>We provide power banks • You earn 40%</div>
+            </div>
+          </label>
+
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '15px',
+            border: formData.partner_type === 'owner' ? '2px solid #10b981' : '1px solid #ddd',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            backgroundColor: formData.partner_type === 'owner' ? '#ecfdf5' : 'white'
+          }}>
+            <input
+              type="radio"
+              name="partner_type"
+              value="owner"
+              checked={formData.partner_type === 'owner'}
+              onChange={(e) => setFormData({ ...formData, partner_type: e.target.value })}
+              style={{ marginRight: '15px', transform: 'scale(1.2)' }}
+            />
+            <div>
+              <div style={{ fontWeight: 'bold', color: '#0f172a' }}>Owner Partnership</div>
+              <div style={{ fontSize: '13px', color: '#64748b' }}>You provide power banks • You earn 75%</div>
+            </div>
+          </label>
+        </div>
+
         <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Bank *</label>
         <select
           style={inputStyle}
-          value={bankCode}
-          onChange={(e) => setBankCode(e.target.value)}
+          value={formData.bank_name}
+          onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
           required
         >
           <option value="">Select your bank</option>
-          {banks.map(bank => (
-            <option key={bank.code} value={bank.code}>{bank.name}</option>
-          ))}
+          {banks.map(b => <option key={b.code} value={b.name}>{b.name}</option>)}
         </select>
 
         <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Account Number *</label>
@@ -217,11 +224,9 @@ export default function RegisterPage() {
           style={inputStyle}
           type="text"
           placeholder="10-digit account number"
-          value={accountNumber}
-          onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+          value={formData.account_number}
+          onChange={(e) => setFormData({ ...formData, account_number: e.target.value.replace(/\D/g, '').slice(0, 10) })}
           required
-          maxLength={10}
-          pattern="[0-9]{10}"
         />
 
         <button
@@ -229,7 +234,7 @@ export default function RegisterPage() {
           disabled={loading}
           style={{
             width: '100%',
-            padding: '15px',
+            padding: '18px',
             backgroundColor: loading ? '#999' : '#10b981',
             color: 'white',
             border: 'none',
@@ -239,15 +244,12 @@ export default function RegisterPage() {
             cursor: 'pointer'
           }}
         >
-          {loading ? 'Creating Account & Verifying Bank...' : 'Register Business'}
+          {loading ? 'Registering...' : 'Register Business'}
         </button>
       </form>
 
-      <div style={{ marginTop: '30px', textAlign: 'center', fontSize: '14px' }}>
-        <p style={{ color: '#64748b' }}>Already have an account?</p>
-        <a href="/auth/login" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 'bold' }}>
-          Login Here
-        </a>
+      <div style={{ marginTop: '30px', textAlign: 'center', fontSize: '14px', color: '#64748b' }}>
+        Already have an account? <Link href="/auth/login" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 'bold' }}>Login Here</Link>
       </div>
     </main>
   );
