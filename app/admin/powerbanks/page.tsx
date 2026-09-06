@@ -45,6 +45,16 @@ export default function AdminPowerBanks() {
     else alert('Error deleting power bank: ' + error.message);
   };
 
+  const getStatusColor = (status: string) => {
+    switch(status) {
+      case 'available': return { bg: '#dcfce7', text: '#15803d', label: '✓ Available' };
+      case 'rented': return { bg: '#dbeafe', text: '#1d4ed8', label: '🔵 Rented' };
+      case 'damaged': return { bg: '#fee2e2', text: '#b91c1c', label: '⚠️ Damaged' };
+      case 'lost': return { bg: '#fef3c7', text: '#92400e', label: '🚨 Lost' };
+      default: return { bg: '#f1f5f9', text: '#64748b', label: status };
+    }
+  };
+
   if (loading) return <main style={{ padding: '20px', textAlign: 'center' }}>Loading power banks...</main>;
 
   return (
@@ -65,28 +75,36 @@ export default function AdminPowerBanks() {
         <p style={{ textAlign: 'center', color: '#64748b' }}>No power banks found.</p>
       ) : (
         <div style={{ display: 'grid', gap: '15px' }}>
-          {powerBanks.map((pb) => (
-            <div key={pb.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h3 style={{ margin: '0 0 5px 0', fontSize: '18px', color: '#0f172a', fontFamily: 'monospace' }}>{pb.pb_code}</h3>
-                <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>📍 {pb.locations?.name || 'Unassigned'}</p>
-                <span style={{ 
-                  display: 'inline-block', marginTop: '5px', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold',
-                  backgroundColor: pb.status === 'available' ? '#dcfce7' : pb.status === 'rented' ? '#dbeafe' : '#fee2e2',
-                  color: pb.status === 'available' ? '#15803d' : pb.status === 'rented' ? '#1d4ed8' : '#b91c1c'
-                }}>
-                  {pb.status.toUpperCase()}
-                </span>
+          {powerBanks.map((pb) => {
+            const statusInfo = getStatusColor(pb.status);
+            return (
+              <div key={pb.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
+                  <div>
+                    <h3 style={{ margin: '0 0 5px 0', fontSize: '18px', color: '#0f172a', fontFamily: 'monospace' }}>{pb.pb_code}</h3>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>📍 {pb.locations?.name || 'Unassigned'}</p>
+                  </div>
+                  <span style={{ 
+                    padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold',
+                    backgroundColor: statusInfo.bg,
+                    color: statusInfo.text
+                  }}>
+                    {statusInfo.label}
+                  </span>
+                </div>
+                
+                {/* Delete Button */}
+                <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '15px', textAlign: 'right' }}>
+                  <button 
+                    onClick={() => handleDelete(pb.id)}
+                    style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', backgroundColor: '#ef4444', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}
+                  >
+                     Delete
+                  </button>
+                </div>
               </div>
-              
-              <button 
-                onClick={() => handleDelete(pb.id)}
-                style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', backgroundColor: '#ef4444', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                🗑 Delete
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
       
