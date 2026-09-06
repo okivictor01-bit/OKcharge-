@@ -1,76 +1,49 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 
-export default function AdminPage() {
+export default function AdminAddLocation() {
+  const router = useRouter();
+  const [owners, setOwners] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     address: '',
-    city: 'Akure',
-    owner_name: '',
-    owner_phone: ''
+    state: '',
+    city: '',
+    town: '',
+    contact_name: '',
+    contact_phone: '',
+    owner_id: ''
   });
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
 
-  const cities = [
-    'Akure', 'Ore', 'Okitipupa', 'Ondo', 'Owo', 'Ikare-Akoko', 'Oka-Akoko', 'Idanre', 'Ifon', 'Ode-Irele', 'Igbokoda', 'Ayetoro', 'Araromi', 'Ijebu-Igbo',
-    'Lagos', 'Ikeja', 'Epe', 'Ikorodu', 'Badagry', 'Lekki', 'Surulere', 'Yaba', 'Mushin', 'Oshodi', 'Agege', 'Alimosho',
-    'Ibadan', 'Ogbomoso', 'Oyo', 'Iseyin', 'Saki', 'Igboho', 'Eruwa', 'Kishi', 'Igbeti', 'Lalupon', 'Moniya', 'Bodija', 'Ring Road', 'Dugbe', 'Challenge', 'Iwo',
-    'Osogbo', 'Ilesa', 'Ife', 'Ede', 'Iwo', 'Ila-Orangun', 'Oke-Ila', 'Ikirun', 'Iragbiji', 'Modakeke', 'Ejigbo', 'Ikire', 'Inisa', 'Ipetumodu',
-    'Abeokuta', 'Ijebu-Ode', 'Sagamu', 'Ota', 'Ijebu-Igbo', 'Ilaro', 'Ago-Iwoye', 'Owode', 'Odeda', 'Iperu', 'Remo', 'Isheri',
-    'Ado-Ekiti', 'Ikere-Ekiti', 'Emure-Ekiti', 'Omuo-Ekiti', 'Ijero-Ekiti', 'Aramoko-Ekiti', 'Ise-Ekiti', 'Oye-Ekiti', 'Ilupeju-Ekiti',
-    'Ilorin', 'Offa', 'Omu-Aran', 'Lafiagi', 'Patigi', 'Jebba', 'Kaiama', 'Share'
-  ];
+  useEffect(() => {
+    fetchOwners();
+  }, []);
+
+  const fetchOwners = async () => {
+    const { data } = await supabase.from('location_owners').select('id, business_name');
+    if (data) setOwners(data);
+  };
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
-    setMessage('');
 
-    let lat = null;
-    let lng = null;
-
-    try {
-      const searchQuery = `${formData.address}, ${formData.city}, Nigeria`;
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`
-      );
-      const data = await response.json();
-      
-      if (data && data.length > 0) {
-        lat = parseFloat(data[0].lat);
-        lng = parseFloat(data[0].lon);
-      }
-    } catch (error) {
-      console.error('Geocoding error:', error);
-    }
-
-    const { error } = await supabase
-      .from('locations')
-      .insert([
-        {
-          name: formData.name,
-          address: formData.address,
-          owner_name: formData.owner_name,
-          owner_phone: formData.owner_phone,
-          status: 'active',
-          is_visible_on_map: true,
-          latitude: lat,
-          longitude: lng
-        }
-      ]);
+    const { error } = await supabase.from('locations').insert([{
+      ...formData,
+      status: 'active',
+      is_visible_on_map: true,
+      created_at: new Date().toISOString()
+    }]);
 
     if (error) {
-      setMessage('Error: ' + error.message);
+      alert('Error: ' + error.message);
     } else {
-      if (lat && lng) {
-        setMessage('Success! Location added with GPS coordinates.');
-      } else {
-        setMessage('Location added, but coordinates not found. You can add them manually later.');
-      }
-      setFormData({ name: '', address: '', city: 'Akure', owner_name: '', owner_phone: '' });
+      alert('Location added successfully!');
+      router.push('/admin/locations');
     }
     setLoading(false);
   };
@@ -79,82 +52,96 @@ export default function AdminPage() {
     width: '100%',
     padding: '12px',
     marginBottom: '15px',
-    border: '1px solid #ccc',
+    border: '1px solid #ddd',
     borderRadius: '8px',
     fontSize: '16px',
     boxSizing: 'border-box' as const
   };
 
   return (
-    <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '500px', margin: '0 auto' }}>
+    <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '600px', margin: '0 auto' }}>
       <h1 style={{ fontSize: '24px', marginBottom: '10px' }}>Add New Location</h1>
-      
-      {/* NEW DASHBOARD LINK */}
-      <a href="/admin/dashboard" style={{ display: 'inline-block', marginBottom: '20px', color: '#2563eb', textDecoration: 'none', fontWeight: 'bold' }}>
-        ← View Admin Dashboard
-      </a>
-
-      {message && (
-        <div style={{ 
-          padding: '15px', 
-          borderRadius: '8px', 
-          marginBottom: '20px',
-          backgroundColor: message.includes('Success') ? '#dcfce7' : '#fee2e2',
-          color: message.includes('Success') ? '#15803d' : '#b91c1c'
-        }}>
-          {message}
-        </div>
-      )}
+      <p style={{ color: '#64748b', marginBottom: '30px' }}>Create a new power bank station</p>
 
       <form onSubmit={handleSubmit}>
-        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Location Name *</label>
-        <input
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Location Name *</label>
+        <input 
           style={inputStyle}
           type="text"
-          placeholder="e.g., ABC Lounge"
+          placeholder="e.g., J&D Babies Store"
           value={formData.name}
           onChange={(e) => setFormData({...formData, name: e.target.value})}
           required
         />
 
-        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Street Address *</label>
-        <input
-          style={inputStyle}
-          type="text"
-          placeholder="e.g., 167, old ore-benin road"
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Full Address *</label>
+        <textarea 
+          style={{...inputStyle, minHeight: '80px'}}
+          placeholder="e.g., 89, Oluwatuyi, Ijoka road"
           value={formData.address}
           onChange={(e) => setFormData({...formData, address: e.target.value})}
           required
         />
 
-        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>City / Town *</label>
-        <select
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>State *</label>
+        <input 
           style={inputStyle}
+          type="text"
+          placeholder="e.g., Lagos"
+          value={formData.state}
+          onChange={(e) => setFormData({...formData, state: e.target.value})}
+          required
+        />
+
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>City *</label>
+        <input 
+          style={inputStyle}
+          type="text"
+          placeholder="e.g., Ikeja"
           value={formData.city}
           onChange={(e) => setFormData({...formData, city: e.target.value})}
-        >
-          {cities.map((city) => (
-            <option key={city} value={city}>{city}</option>
-          ))}
-        </select>
+          required
+        />
 
-        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Owner Name</label>
-        <input
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Town/Area</label>
+        <input 
+          style={inputStyle}
+          type="text"
+          placeholder="e.g., Allen Avenue"
+          value={formData.town}
+          onChange={(e) => setFormData({...formData, town: e.target.value})}
+        />
+
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Contact Person Name</label>
+        <input 
           style={inputStyle}
           type="text"
           placeholder="e.g., John Doe"
-          value={formData.owner_name}
-          onChange={(e) => setFormData({...formData, owner_name: e.target.value})}
+          value={formData.contact_name}
+          onChange={(e) => setFormData({...formData, contact_name: e.target.value})}
         />
 
-        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Owner Phone</label>
-        <input
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Contact Phone</label>
+        <input 
           style={inputStyle}
           type="tel"
-          placeholder="e.g., 08012345678"
-          value={formData.owner_phone}
-          onChange={(e) => setFormData({...formData, owner_phone: e.target.value})}
+          placeholder="e.g., 08031464603"
+          value={formData.contact_phone}
+          onChange={(e) => setFormData({...formData, contact_phone: e.target.value})}
         />
+
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Assign to Owner *</label>
+        <select 
+          style={inputStyle}
+          value={formData.owner_id}
+          onChange={(e) => setFormData({...formData, owner_id: e.target.value})}
+          required
+        >
+          <option value="">-- Select Owner --</option>
+          {owners.map(owner => (
+            <option key={owner.id} value={owner.id}>{owner.business_name}</option>
+          ))}
+        </select>
 
         <button
           type="submit"
@@ -162,20 +149,21 @@ export default function AdminPage() {
           style={{
             width: '100%',
             padding: '15px',
-            backgroundColor: loading ? '#999' : '#2563eb',
+            backgroundColor: loading ? '#999' : '#10b981',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
             fontSize: '18px',
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            cursor: 'pointer'
           }}
         >
-          {loading ? 'Finding Coordinates & Saving...' : 'Save Location'}
+          {loading ? 'Creating...' : 'Create Location'}
         </button>
       </form>
 
       <div style={{ marginTop: '30px', textAlign: 'center' }}>
-        <a href="/" style={{ color: '#2563eb', textDecoration: 'none' }}>← Back to Home</a>
+        <a href="/admin/locations" style={{ color: '#2563eb', textDecoration: 'none' }}>← Back to Locations</a>
       </div>
     </main>
   );
