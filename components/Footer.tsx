@@ -17,7 +17,7 @@ export default function Footer() {
         }}>
           {/* Brand */}
           <div>
-            <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: '#2563eb', margin: '0 0 15px 0' }}>⚡ OKcharge</h3>
+            <img src="/logo.png" alt="OKcharge" style={{ height: '50px', width: 'auto', marginBottom: '15px' }} />
             <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
               Never run out of battery again. Rent power banks instantly across the city.
             </p>
@@ -46,7 +46,7 @@ export default function Footer() {
           <div>
             <h4 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 15px 0', color: '#0f172a' }}>Contact Us</h4>
             <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 8px 0' }}>📍 Lagos, Nigeria</p>
-            <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 8px 0' }}>📱 +234 703 238 5674</p>
+            <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 8px 0' }}> +234 703 238 5674</p>
             <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>✉️ support@okcharge.ng</p>
           </div>
         </div>
