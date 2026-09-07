@@ -39,6 +39,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     checkAuth();
   }, []);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/auth/admin-login';
+  };
+
   if (!isAuthorized) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f8fafc' }}>
@@ -49,7 +54,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <>
-      {/* Admin Header Bar */}
       <header style={{ 
         backgroundColor: '#0f172a', 
         color: 'white', 
@@ -60,47 +64,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}>
         <Link href="/admin/dashboard" style={{ 
-          color: 'white', 
           textDecoration: 'none', 
-          fontSize: '18px', 
-          fontWeight: 'bold' 
+          display: 'flex',
+          alignItems: 'center'
         }}>
-           OKcharge Admin
+          <img src="/logo.png" alt="OKcharge" style={{ height: '40px', width: 'auto' }} />
         </Link>
         
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-          <Link href="/admin/dashboard" style={{ 
-            color: '#94a3b8', 
-            textDecoration: 'none', 
-            fontSize: '14px' 
-          }}>
-            Dashboard
-          </Link>
-          <Link href="/admin/locations" style={{ 
-            color: '#94a3b8', 
-            textDecoration: 'none', 
-            fontSize: '14px' 
-          }}>
-            Locations
-          </Link>
-          <Link href="/admin/owners" style={{ 
-            color: '#94a3b8', 
-            textDecoration: 'none', 
-            fontSize: '14px' 
-          }}>
-            Owners
-          </Link>
-          <Link href="/admin/logout" style={{ 
-            backgroundColor: '#ef4444', 
-            color: 'white', 
-            padding: '8px 16px', 
-            borderRadius: '6px', 
-            textDecoration: 'none', 
-            fontSize: '14px', 
-            fontWeight: 'bold' 
-          }}>
+          <Link href="/admin/dashboard" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Dashboard</Link>
+          <Link href="/admin/locations" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Locations</Link>
+          <Link href="/admin/owners" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Owners</Link>
+          <button 
+            onClick={handleLogout}
+            style={{ 
+              backgroundColor: '#ef4444', 
+              color: 'white', 
+              padding: '8px 16px', 
+              borderRadius: '6px', 
+              border: 'none',
+              fontSize: '14px', 
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
             Logout
-          </Link>
+          </button>
         </div>
       </header>
 
