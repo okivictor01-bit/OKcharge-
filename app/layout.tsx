@@ -6,8 +6,12 @@ import Footer from "@/components/Footer";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "OKcharge - Power Bank Rental",
-  description: "Rent a power bank easily and securely with OKcharge.",
+  title: "OKcharge - Power Bank Rentals",
+  description: "Stay Charged, Always. Rent a power bank instantly across the city.",
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({
@@ -29,10 +33,10 @@ export default function RootLayout({
           {children}
         </div>
         
-        {/* 🚀 Global Footer */}
+        {/* Global Footer */}
         <Footer />
         
-        {/* 🚀 Global WhatsApp Button */}
+        {/* Global WhatsApp Button */}
         <WhatsAppButton />
         
       </body>
