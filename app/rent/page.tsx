@@ -14,7 +14,6 @@ interface Location {
   subaccount_code: string | null;
 }
 
-// Nigerian States
 const nigerianStates = [
   'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno',
   'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'Gombe', 'Imo',
@@ -23,10 +22,9 @@ const nigerianStates = [
   'Sokoto', 'Taraba', 'Yobe', 'Zamfara', 'FCT'
 ];
 
-// Major LGAs/Cities by State
 const stateLGAs: Record<string, string[]> = {
   'Lagos': ['Ikeja', 'Surulere', 'Yaba', 'Ikorodu', 'Epe', 'Badagry', 'Mushin', 'Oshodi', 'Alimosho', 'Kosofe', 'Shomolu', 'Agege', 'Ajeromi-Ifelodun', 'Amuwo-Odofin', 'Apapa', 'Eti-Osa', 'Ifako-Ijaiye', 'Lagos Island', 'Lagos Mainland', 'Ojo'],
-  'Abuja': ['Abuja Municipal', 'Gwagwalada', 'Kuje', 'Bwari', 'Abaji', 'Kwali'],
+  'Ondo': ['Akoko North-East', 'Akoko North-West', 'Akoko South-East', 'Akoko South-West', 'Akure North', 'Akure South', 'Ese Odo', 'Idanre', 'Ifedore', 'Ilaje', 'Ile Oluji/Okeigbo', 'Irele', 'Odigbo', 'Okitipupa', 'Ondo East', 'Ondo West', 'Ose', 'Owo'],
   'FCT': ['Abuja Municipal', 'Gwagwalada', 'Kuje', 'Bwari', 'Abaji', 'Kwali'],
   'Rivers': ['Port Harcourt', 'Obio-Akpor', 'Okrika', 'Ogu-Bolo', 'Eleme', 'Tai', 'Gokana', 'Khana', 'Asari-Toru', 'Akuku-Toru'],
   'Kano': ['Kano Municipal', 'Fagge', 'Dala', 'Gwale', 'Tarauni', 'Nassarawa', 'Kumbotso', 'Ungogo', 'Kura', 'Madobi'],
@@ -34,12 +32,6 @@ const stateLGAs: Record<string, string[]> = {
   'Delta': ['Warri', 'Uvwie', 'Udu', 'Okpe', 'Sapele', 'Ethiope East', 'Ethiope West', 'Ughelli North', 'Ughelli South', 'Bomadi'],
   'Edo': ['Benin City', 'Oredo', 'Egor', 'Uhunmwonde', 'Ovia North-East', 'Ovia South-West', 'Esan North-East', 'Esan South-East', 'Esan Central', 'Esan West'],
   'Ogun': ['Abeokuta North', 'Abeokuta South', 'Ado-Odo/Ota', 'Ewekoro', 'Ifo', 'Ijebu East', 'Ijebu North', 'Ijebu North-East', 'Ijebu Ode', 'Remo North'],
-  'Ondo': [
-    'Akoko North-East', 'Akoko North-West', 'Akoko South-East', 'Akoko South-West',
-    'Akure North', 'Akure South', 'Ese Odo', 'Idanre', 'Ifedore', 
-    'Ilaje', 'Ile Oluji/Okeigbo', 'Irele', 'Odigbo', 
-    'Okitipupa', 'Ondo East', 'Ondo West', 'Ose', 'Owo'
-  ],
   'Osun': ['Osogbo', 'Ede North', 'Ede South', 'Atakumosa East', 'Atakumosa West', 'Ife Central', 'Ife East', 'Ife North', 'Ife South', 'Egbedore'],
   'Kaduna': ['Kaduna North', 'Kaduna South', 'Igabi', 'Kaura', 'Sanga', 'Jema\'a', 'Anchau', 'Kachia', 'Kagarko', 'Kajuru'],
   'Katsina': ['Katsina', 'Daura', 'Funtua', 'Malumfashi', 'Mashi', 'Bindawa', 'Charanchi', 'Dandume', 'Danja', 'Dan Musa'],
@@ -78,9 +70,8 @@ export default function RentPage() {
   const [loading, setLoading] = useState(false);
   const [ticket, setTicket] = useState('');
   const [error, setError] = useState('');
-  const [paystackReady, setPaystackReady] = useState(false);
+  const [paystackLoaded, setPaystackLoaded] = useState(false);
   
-  // Search fields
   const [searchState, setSearchState] = useState('');
   const [searchLGA, setSearchLGA] = useState('');
   const [searchTown, setSearchTown] = useState('');
@@ -98,9 +89,9 @@ export default function RentPage() {
   }, []);
 
   useEffect(() => {
-    // Update LGAs when state changes
     if (searchState && stateLGAs[searchState]) {
       setAvailableLGAs(stateLGAs[searchState]);
+      setSearchLGA('');
     } else {
       setAvailableLGAs([]);
       setSearchLGA('');
@@ -164,7 +155,6 @@ export default function RentPage() {
     setSearchState('');
     setSearchLGA('');
     setSearchTown('');
-    setAvailableLGAs([]);
     setFilteredLocations(locations);
     setSelectedLocation('');
   };
@@ -180,8 +170,20 @@ export default function RentPage() {
 
   const handlePayment = (e: any) => {
     e.preventDefault();
-    if (!selectedLocation) { setError('Please select a location'); return; }
-    if (!customerName || !customerPhone) { setError('Please fill in all fields'); return; }
+    
+    if (!selectedLocation) { 
+      setError('Please select a location'); 
+      return; 
+    }
+    if (!customerName || !customerPhone) { 
+      setError('Please fill in all fields'); 
+      return; 
+    }
+
+    if (!paystackLoaded) {
+      setError('Payment system is still loading. Please wait...');
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -192,36 +194,53 @@ export default function RentPage() {
     const selectedLoc = locations.find(loc => loc.id === selectedLocation);
     const subaccount = selectedLoc?.subaccount_code || undefined;
 
-    const handler = (window as any).PaystackPop.setup({
-      key: 'pk_live_9dd06423b57f6a6f6927e3ea2e28a101baa01fba',
-      email: email,
-      amount: amount,
-      ref: ticketCode,
-      subaccount: subaccount,
-      callback: function(response: any) {
-        console.log('Payment successful:', response);
-        saveRental(ticketCode, response.reference);
-      },
-      onClose: function() {
-        setError('Payment window closed');
-        setLoading(false);
-      }
-    });
+    try {
+      const handler = (window as any).PaystackPop.setup({
+        key: 'pk_live_9dd06423b57f6a6f6927e3ea2e28a101baa01fba',
+        email: email,
+        amount: amount,
+        ref: ticketCode,
+        subaccount: subaccount,
+        callback: function(response: any) {
+          console.log('Payment successful:', response);
+          saveRental(ticketCode, response.reference);
+        },
+        onClose: function() {
+          setError('Payment window closed');
+          setLoading(false);
+        }
+      });
 
-    handler.openIframe();
+      handler.openIframe();
+    } catch (err: any) {
+      console.error('Paystack error:', err);
+      setError('Payment system error. Please try again.');
+      setLoading(false);
+    }
   };
 
   const saveRental = async (ticketCode: string, reference: string) => {
     try {
       const { error } = await supabase.from('rentals').insert([{
-        ticket_code: ticketCode, location_id: selectedLocation, customer_name: customerName,
-        customer_phone: customerPhone, duration_hours: parseInt(duration), amount_paid: pricing[duration],
-        status: 'paid', paystack_reference: reference, created_at: new Date().toISOString()
+        ticket_code: ticketCode, 
+        location_id: selectedLocation, 
+        customer_name: customerName,
+        customer_phone: customerPhone, 
+        duration_hours: parseInt(duration), 
+        amount_paid: pricing[duration],
+        status: 'paid', 
+        paystack_reference: reference, 
+        created_at: new Date().toISOString()
       }]);
 
-      if (error) { setError('Payment successful but failed to save. Ticket: ' + ticketCode); } 
-      else { setTicket(ticketCode); }
-    } catch (err) { setError('Error saving rental: ' + err); }
+      if (error) { 
+        setError('Payment successful but failed to save. Ticket: ' + ticketCode); 
+      } else { 
+        setTicket(ticketCode); 
+      }
+    } catch (err: any) { 
+      setError('Error saving rental: ' + err); 
+    }
     setLoading(false);
   };
 
@@ -230,7 +249,19 @@ export default function RentPage() {
 
   return (
     <>
-      <Script src="https://js.paystack.co/v1/inline.js" strategy="afterInteractive" onLoad={() => setPaystackReady(true)} onError={() => setError('Payment system unavailable')} />
+      <Script 
+        src="https://js.paystack.co/v1/inline.js" 
+        strategy="afterInteractive" 
+        onLoad={() => {
+          console.log('Paystack loaded successfully');
+          setPaystackLoaded(true);
+        }} 
+        onError={() => {
+          console.error('Failed to load Paystack');
+          setError('Payment system unavailable');
+        }} 
+      />
+      
       <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '600px', margin: '0 auto' }}>
         {ticket ? (
           <div style={{ textAlign: 'center', padding: '20px' }}>
@@ -257,13 +288,37 @@ export default function RentPage() {
           <>
             <h1 style={{ fontSize: '24px', marginBottom: '10px' }}>Rent a Power Bank</h1>
             <p style={{ color: '#64748b', marginBottom: '30px' }}>Find a station and pay securely</p>
-            {error && <div style={{ padding: '15px', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '20px' }}>{error}</div>}
-            {!paystackReady && <div style={{ padding: '15px', backgroundColor: '#fff3cd', color: '#856404', borderRadius: '8px', marginBottom: '20px', textAlign: 'center' }}>Loading payment system...</div>}
+            
+            {error && (
+              <div style={{ 
+                padding: '15px', 
+                backgroundColor: error.includes('successful') ? '#dcfce7' : '#fee2e2', 
+                color: error.includes('successful') ? '#15803d' : '#b91c1c', 
+                borderRadius: '8px', 
+                marginBottom: '20px',
+                border: `1px solid ${error.includes('successful') ? '#86efac' : '#fca5a5'}`
+              }}>
+                {error}
+              </div>
+            )}
+            
+            {!paystackLoaded && !error && (
+              <div style={{ 
+                padding: '15px', 
+                backgroundColor: '#fef3c7', 
+                color: '#92400e', 
+                borderRadius: '8px', 
+                marginBottom: '20px', 
+                textAlign: 'center',
+                border: '1px solid #fde68a'
+              }}>
+                Loading payment system...
+              </div>
+            )}
             
             <form onSubmit={handlePayment}>
-              {/* Search Section */}
               <div style={{ backgroundColor: '#f0f9ff', padding: '20px', borderRadius: '12px', border: '1px solid #bae6fd', marginBottom: '20px' }}>
-                <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#0369a1' }}> Find a Station</h3>
+                <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#0369a1' }}>🔍 Find a Station</h3>
                 
                 <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', fontSize: '14px' }}>State *</label>
                 <select 
@@ -325,7 +380,6 @@ export default function RentPage() {
                 </div>
               </div>
 
-              {/* Location Selection */}
               <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Select Location *</label>
               <select style={selectStyle} value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} required>
                 <option value="">-- Choose a location --</option>
@@ -355,8 +409,22 @@ export default function RentPage() {
                 <h2 style={{ margin: '5px 0 0 0', fontSize: '28px', color: '#0f172a' }}>₦{pricing[duration].toLocaleString()}</h2>
               </div>
 
-              <button type="submit" disabled={loading || !paystackReady} style={{ width: '100%', padding: '18px', backgroundColor: loading || !paystackReady ? '#999' : '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold', cursor: loading || !paystackReady ? 'not-allowed' : 'pointer' }}>
-                {loading ? 'Processing...' : !paystackReady ? 'Loading...' : 'Pay Now with Paystack'}
+              <button 
+                type="submit" 
+                disabled={loading || !paystackLoaded} 
+                style={{ 
+                  width: '100%', 
+                  padding: '18px', 
+                  backgroundColor: loading || !paystackLoaded ? '#999' : '#10b981', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '8px', 
+                  fontSize: '18px', 
+                  fontWeight: 'bold', 
+                  cursor: loading || !paystackLoaded ? 'not-allowed' : 'pointer' 
+                }}
+              >
+                {loading ? 'Processing...' : !paystackLoaded ? 'Loading Payment...' : 'Pay Now with Paystack'}
               </button>
             </form>
             <div style={{ marginTop: '30px', textAlign: 'center' }}><a href="/" style={{ color: '#2563eb', textDecoration: 'none' }}>← Back to Home</a></div>
