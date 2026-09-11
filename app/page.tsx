@@ -42,7 +42,7 @@ export default function Home() {
             Stay Charged, <br /><span style={{ color: '#10b981' }}>Always</span>
           </h1>
           <p style={{ fontSize: '20px', color: '#e5e7eb', marginBottom: '40px', maxWidth: '600px', margin: '0 auto 40px auto' }}>
-            Rent a power bank. Keep going. Fast, easy and reliable.
+            Scan the QR code at any OKcharge location. Rent a power bank in seconds. Fast, easy and reliable.
           </p>
           <a href="/rent" style={{ display: 'inline-block', backgroundColor: '#10b981', color: 'white', padding: '18px 40px', borderRadius: '50px', textDecoration: 'none', fontSize: '18px', fontWeight: 'bold', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)' }}> Rent a Power Bank Now</a>
         </div>
@@ -51,11 +51,66 @@ export default function Home() {
       {/* How It Works */}
       <section style={{ backgroundColor: '#f8fafc', padding: '60px 20px' }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-          <h2 style={{ textAlign: 'center', fontSize: '28px', marginBottom: '40px' }}>How It Works</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '30px' }}>
-            <div style={{ textAlign: 'center', padding: '20px' }}><div style={{ fontSize: '40px', marginBottom: '15px' }}></div><h3 style={{ fontSize: '18px', marginBottom: '10px' }}>1. Find a Station</h3><p style={{ color: '#64748b', fontSize: '14px' }}>Locate the nearest OKcharge power bank station at your favorite store or cafe.</p></div>
-            <div style={{ textAlign: 'center', padding: '20px' }}><div style={{ fontSize: '40px', marginBottom: '15px' }}>💳</div><h3 style={{ fontSize: '18px', marginBottom: '10px' }}>2. Pay Securely</h3><p style={{ color: '#64748b', fontSize: '14px' }}>Enter your details and pay instantly via Paystack. Get your unique rental ticket.</p></div>
-            <div style={{ textAlign: 'center', padding: '20px' }}><div style={{ fontSize: '40px', marginBottom: '15px' }}>🔌</div><h3 style={{ fontSize: '18px', marginBottom: '10px' }}>3. Unlock & Charge</h3><p style={{ color: '#64748b', fontSize: '14px' }}>Show your ticket to the staff, grab a fully charged power bank, and enjoy!</p></div>
+          <h2 style={{ textAlign: 'center', fontSize: '28px', marginBottom: '15px' }}>How It Works</h2>
+          <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '40px', fontSize: '16px' }}>Three simple steps to stay charged</p>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px' }}>
+            {/* Step 1 */}
+            <div style={{ textAlign: 'center', padding: '30px 20px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+              <div style={{ 
+                width: '80px', 
+                height: '80px', 
+                backgroundColor: '#eff6ff', 
+                borderRadius: '50%', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                margin: '0 auto 20px auto',
+                fontSize: '40px'
+              }}>📱</div>
+              <h3 style={{ fontSize: '20px', marginBottom: '12px', color: '#0f172a' }}>1. Scan QR Code</h3>
+              <p style={{ color: '#64748b', fontSize: '15px', lineHeight: '1.6', margin: 0 }}>
+                Find an OKcharge station at your favorite store or cafe. Scan the QR code on the power bank station with your phone camera.
+              </p>
+            </div>
+
+            {/* Step 2 */}
+            <div style={{ textAlign: 'center', padding: '30px 20px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+              <div style={{ 
+                width: '80px', 
+                height: '80px', 
+                backgroundColor: '#eff6ff', 
+                borderRadius: '50%', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                margin: '0 auto 20px auto',
+                fontSize: '40px'
+              }}>💳</div>
+              <h3 style={{ fontSize: '20px', marginBottom: '12px', color: '#0f172a' }}>2. Pay Securely</h3>
+              <p style={{ color: '#64748b', fontSize: '15px', lineHeight: '1.6', margin: 0 }}>
+                Choose your rental duration and pay instantly via Paystack. You'll receive a unique rental ticket code immediately.
+              </p>
+            </div>
+
+            {/* Step 3 */}
+            <div style={{ textAlign: 'center', padding: '30px 20px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+              <div style={{ 
+                width: '80px', 
+                height: '80px', 
+                backgroundColor: '#eff6ff', 
+                borderRadius: '50%', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                margin: '0 auto 20px auto',
+                fontSize: '40px'
+              }}>🔌</div>
+              <h3 style={{ fontSize: '20px', marginBottom: '12px', color: '#0f172a' }}>3. Unlock & Charge</h3>
+              <p style={{ color: '#64748b', fontSize: '15px', lineHeight: '1.6', margin: 0 }}>
+                Show your ticket code to the location staff. They'll scan a power bank for you. Grab it and start charging instantly!
+              </p>
+            </div>
           </div>
         </div>
       </section>
