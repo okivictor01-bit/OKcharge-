@@ -32,13 +32,11 @@ export default function PrintPowerBankQRPage() {
       return;
     }
 
-    // Check if user is admin
     if (user.email === 'tvicglobal@gmail.com') {
       setIsAuthorized(true);
       return;
     }
 
-    // Check if user is staff
     const { data: staffData } = await supabase
       .from('staff')
       .select('*')
@@ -51,7 +49,6 @@ export default function PrintPowerBankQRPage() {
       return;
     }
 
-    // Not authorized
     alert('Access denied. Only admin and staff can print QR codes.');
     router.push('/');
   };
@@ -119,66 +116,183 @@ export default function PrintPowerBankQRPage() {
     <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }} className="no-print">
         <div>
-          <h1 style={{ fontSize: '24px', margin: '0 0 5px 0' }}> Power Bank QR Codes</h1>
+          <h1 style={{ fontSize: '24px', margin: '0 0 5px 0' }}>🔋 Power Bank QR Codes</h1>
           <p style={{ color: '#64748b', margin: 0 }}>Location: <strong>{locationName}</strong></p>
+          <p style={{ color: '#94a3b8', margin: '5px 0 0 0', fontSize: '14px' }}>Total: {powerBanks.length} power banks</p>
         </div>
-        <button 
-          onClick={handlePrint}
-          style={{ backgroundColor: '#2563eb', color: 'white', padding: '12px 24px', borderRadius: '8px', border: 'none', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}
-        >
-          🖨️ Print QR Codes
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button 
+            onClick={handlePrint}
+            style={{ backgroundColor: '#2563eb', color: 'white', padding: '12px 24px', borderRadius: '8px', border: 'none', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}
+          >
+            🖨️ Print A4 Sheet
+          </button>
+          <a 
+            href="/admin/locations"
+            style={{ backgroundColor: '#6b7280', color: 'white', padding: '12px 24px', borderRadius: '8px', textDecoration: 'none', fontSize: '14px', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}
+          >
+            ← Back
+          </a>
+        </div>
       </div>
 
-      <p style={{ color: '#64748b', marginBottom: '30px', fontSize: '14px' }} className="no-print">
-        Print these QR codes and stick them on each power bank. Staff can scan to manage rentals.
-      </p>
+      <div className="no-print" style={{ backgroundColor: '#f0f9ff', padding: '15px', borderRadius: '8px', marginBottom: '30px', border: '1px solid #bae6fd' }}>
+        <p style={{ margin: 0, fontSize: '14px', color: '#0369a1' }}>
+          💡 <strong>Print Tip:</strong> This page is optimized for A4 paper. Each QR code card will fit perfectly. Use "Fit to page" in your printer settings.
+        </p>
+      </div>
 
       {powerBanks.length === 0 ? (
         <p style={{ textAlign: 'center', color: '#64748b', padding: '40px' }}>No power banks found for this location.</p>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
+        <div className="qr-grid">
           {powerBanks.map((pb) => {
-            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://okcharge.pages.dev/staff/pb?code=${pb.pb_code}`;
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://okcharge.pages.dev/staff/pb?code=${pb.pb_code}`;
             
             return (
-              <div key={pb.id} style={{ 
-                border: '2px solid #e2e8f0', 
-                borderRadius: '12px', 
-                padding: '20px', 
-                textAlign: 'center', 
-                backgroundColor: 'white',
-                pageBreakInside: 'avoid'
-              }}>
+              <div key={pb.id} className="qr-card">
                 <img 
                   src={qrUrl} 
                   alt={`QR Code for ${pb.pb_code}`}
-                  style={{ width: '150px', height: '150px', marginBottom: '15px' }}
+                  className="qr-image"
                 />
-                <h3 style={{ margin: '0 0 5px 0', fontSize: '18px', color: '#0f172a', fontFamily: 'monospace' }}>{pb.pb_code}</h3>
-                <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
-                  Status: <strong style={{ color: pb.status === 'available' ? '#10b981' : '#3b82f6' }}>
-                    {pb.status.toUpperCase()}
-                  </strong>
-                </p>
-                <p style={{ margin: '10px 0 0 0', fontSize: '11px', color: '#94a3b8', fontFamily: 'monospace' }}>
-                  okcharge.pages.dev/staff/pb?code={pb.pb_code}
-                </p>
+                <div className="qr-info">
+                  <h3 className="qr-code">{pb.pb_code}</h3>
+                  <p className="qr-location">{locationName}</p>
+                  <p className="qr-status">
+                    Status: <strong>{pb.status.toUpperCase()}</strong>
+                  </p>
+                </div>
               </div>
             );
           })}
         </div>
       )}
 
-      <div style={{ marginTop: '30px', textAlign: 'center' }} className="no-print">
-        <a href="/admin/locations" style={{ color: '#2563eb', textDecoration: 'none' }}>← Back to Locations</a>
-      </div>
-
       <style jsx global>{`
+        /* Grid layout for QR codes - 3 columns for A4 */
+        .qr-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 20px;
+          padding: 20px;
+        }
+
+        /* Individual QR card */
+        .qr-card {
+          border: 2px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 15px;
+          text-align: center;
+          background-color: white;
+          page-break-inside: avoid;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
+        /* QR code image */
+        .qr-image {
+          width: 120px;
+          height: 120px;
+          margin-bottom: 10px;
+        }
+
+        /* QR info section */
+        .qr-info {
+          width: 100%;
+        }
+
+        .qr-code {
+          margin: 0 0 5px 0;
+          font-size: 16px;
+          color: #0f172a;
+          font-family: monospace;
+          font-weight: bold;
+        }
+
+        .qr-location {
+          margin: 0 0 5px 0;
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        .qr-status {
+          margin: 0;
+          font-size: 11px;
+          color: #94a3b8;
+        }
+
+        .qr-status strong {
+          color: #10b981;
+        }
+
+        /* Print-specific styles for A4 */
         @media print {
-          .no-print { display: none !important; }
-          body { background: white; }
-          main { max-width: 100%; padding: 0; }
+          @page {
+            size: A4;
+            margin: 15mm;
+          }
+
+          body {
+            background: white;
+            margin: 0;
+            padding: 0;
+          }
+
+          main {
+            max-width: 100%;
+            padding: 0;
+            margin: 0;
+          }
+
+          .no-print {
+            display: none !important;
+          }
+
+          .qr-grid {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            padding: 0;
+          }
+
+          .qr-card {
+            border: 1px solid #cbd5e1;
+            padding: 10px;
+            break-inside: avoid;
+          }
+
+          .qr-image {
+            width: 100px;
+            height: 100px;
+          }
+
+          .qr-code {
+            font-size: 14px;
+          }
+
+          .qr-location {
+            font-size: 10px;
+          }
+
+          .qr-status {
+            font-size: 9px;
+          }
+        }
+
+        /* Responsive for mobile */
+        @media screen and (max-width: 768px) {
+          .qr-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+          }
+        }
+
+        @media screen and (max-width: 480px) {
+          .qr-grid {
+            grid-template-columns: 1fr;
+            gap: 15px;
+          }
         }
       `}</style>
     </main>
