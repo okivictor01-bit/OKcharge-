@@ -9,97 +9,136 @@ export default function AdminLocations() {
   const [locations, setLocations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { fetchLocations(); }, []);
+  useEffect(() => {
+    fetchLocations();
+  }, []);
 
   const fetchLocations = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('locations')
-      .select('*')
+      .select('*, location_owners(business_name)')
       .order('created_at', { ascending: false });
-      
+    
     if (!error) setLocations(data || []);
     setLoading(false);
   };
 
-  const handleToggleStatus = async (id: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
-    const { error } = await supabase
-      .from('locations')
-      .update({ status: newStatus })
-      .eq('id', id);
-      
-    if (!error) fetchLocations();
-  };
-
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure? This will delete the location AND all power banks assigned to it.')) return;
+    if (!window.confirm('Are you sure you want to delete this location?')) return;
 
-    // 1. First, delete all power banks at this location to avoid foreign key errors
-    await supabase.from('power_banks').delete().eq('location_id', id);
-    
-    // 2. Then, delete the location itself
     const { error } = await supabase.from('locations').delete().eq('id', id);
     
     if (!error) fetchLocations();
-    else alert('Error deleting location: ' + error.message);
+    else alert('Error: ' + error.message);
   };
 
-  if (loading) return <main style={{ padding: '20px', textAlign: 'center' }}>Loading locations...</main>;
+  if (loading) return <main style={{ padding: '20px', textAlign: 'center' }}>Loading...</main>;
 
   return (
-    <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '800px', margin: '0 auto' }}>
+    <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '1000px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <h1 style={{ fontSize: '24px', margin: 0 }}>All Locations ({locations.length})</h1>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <a href="/admin/print-qr" style={{ backgroundColor: '#8b5cf6', color: 'white', padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', fontSize: '14px', fontWeight: 'bold' }}>🖨️ Print QRs</a>
-          <a href="/admin" style={{ backgroundColor: '#2563eb', color: 'white', padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', fontSize: '14px', fontWeight: 'bold' }}>+ Add New</a>
-        </div>
+        <h1 style={{ fontSize: '24px', margin: 0 }}>Manage Locations ({locations.length})</h1>
+        <a 
+          href="/admin"
+          style={{ backgroundColor: '#2563eb', color: 'white', padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', fontSize: '14px', fontWeight: 'bold' }}
+        >
+          + Add New
+        </a>
       </div>
 
       {locations.length === 0 ? (
         <p style={{ textAlign: 'center', color: '#64748b' }}>No locations found.</p>
       ) : (
-        locations.map((loc) => (
-          <div key={loc.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '15px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-              <h2 style={{ margin: 0, fontSize: '20px', color: '#0f172a' }}>{loc.name}</h2>
-              <span style={{ 
-                padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold',
-                backgroundColor: loc.status === 'active' ? '#dcfce7' : '#fee2e2',
-                color: loc.status === 'active' ? '#15803d' : '#b91c1c'
-              }}>
-                {loc.status === 'active' ? '✓ Active' : '⚠ Suspended'}
-              </span>
-            </div>
-            
-            <p style={{ margin: '5px 0', color: '#475569', fontSize: '14px' }}>📍 {loc.address}</p>
-            <p style={{ margin: '5px 0', color: '#64748b', fontSize: '14px' }}>👤 {loc.contact_name || 'N/A'} • 📞 {loc.contact_phone || 'N/A'}</p>
-            
-            <div style={{ marginTop: '20px', display: 'flex', gap: '10px', borderTop: '1px solid #f1f5f9', paddingTop: '15px' }}>
-              <button 
-                onClick={() => handleToggleStatus(loc.id, loc.status)}
-                style={{ 
-                  padding: '8px 16px', borderRadius: '6px', border: 'none', fontWeight: 'bold', cursor: 'pointer',
-                  backgroundColor: loc.status === 'active' ? '#f59e0b' : '#10b981', color: 'white' 
-                }}
-              >
-                {loc.status === 'active' ? '⏸ Suspend' : '▶ Activate'}
-              </button>
+        <div style={{ display: 'grid', gap: '15px' }}>
+          {locations.map((loc) => (
+            <div key={loc.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ margin: '0 0 5px 0', fontSize: '18px', color: '#0f172a' }}>{loc.name}</h3>
+                  <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#64748b' }}>📍 {loc.address}</p>
+                  <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>
+                    🏢 Owner: <strong>{loc.location_owners?.business_name || 'Unassigned'}</strong>
+                  </p>
+                  <p style={{ margin: '5px 0 0 0', fontSize: '13px', color: '#94a3b8' }}>
+                    State: {loc.state} • City: {loc.city} • Town: {loc.town}
+                  </p>
+                </div>
+                <span style={{ 
+                  padding: '4px 12px', 
+                  borderRadius: '20px', 
+                  fontSize: '12px', 
+                  fontWeight: 'bold',
+                  backgroundColor: loc.status === 'active' ? '#dcfce7' : '#fee2e2', 
+                  color: loc.status === 'active' ? '#15803d' : '#b91c1c' 
+                }}>
+                  {loc.status.toUpperCase()}
+                </span>
+              </div>
               
-              <button 
-                onClick={() => handleDelete(loc.id)}
-                style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', backgroundColor: '#ef4444', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                🗑 Delete
-              </button>
-
-              <a href={`/admin/powerbanks?location=${loc.id}`} style={{ marginLeft: 'auto', color: '#2563eb', textDecoration: 'none', fontSize: '14px', fontWeight: 'bold', alignSelf: 'center' }}>
-                Manage Power Banks →
-              </a>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', borderTop: '1px solid #f1f5f9', paddingTop: '15px' }}>
+                <a 
+                  href={`/admin/powerbanks?location=${loc.id}`}
+                  style={{ 
+                    padding: '8px 16px', 
+                    borderRadius: '6px', 
+                    backgroundColor: '#3b82f6', 
+                    color: 'white', 
+                    textDecoration: 'none',
+                    fontWeight: 'bold',
+                    fontSize: '13px'
+                  }}
+                >
+                  🔋 Manage Power Banks
+                </a>
+                <a 
+                  href={`/admin/print-powerbank-qr?location=${loc.id}`}
+                  style={{ 
+                    padding: '8px 16px', 
+                    borderRadius: '6px', 
+                    backgroundColor: '#10b981', 
+                    color: 'white', 
+                    textDecoration: 'none',
+                    fontWeight: 'bold',
+                    fontSize: '13px'
+                  }}
+                >
+                  🖨️ Print PB QR Codes
+                </a>
+                <button 
+                  onClick={() => router.push(`/admin/print-qr?location=${loc.id}`)}
+                  style={{ 
+                    padding: '8px 16px', 
+                    borderRadius: '6px', 
+                    border: 'none', 
+                    backgroundColor: '#f59e0b', 
+                    color: 'white', 
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    fontSize: '13px'
+                  }}
+                >
+                  📍 Print Location QR
+                </button>
+                <button 
+                  onClick={() => handleDelete(loc.id)}
+                  style={{ 
+                    padding: '8px 16px', 
+                    borderRadius: '6px', 
+                    border: 'none', 
+                    backgroundColor: '#ef4444', 
+                    color: 'white', 
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    fontSize: '13px'
+                  }}
+                >
+                  🗑 Delete
+                </button>
+              </div>
             </div>
-          </div>
-        ))
+          ))}
+        </div>
       )}
       
       <div style={{ marginTop: '30px', textAlign: 'center' }}>
