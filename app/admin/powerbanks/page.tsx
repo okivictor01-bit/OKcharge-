@@ -74,7 +74,6 @@ export default function AdminPowerBanks() {
     }
 
     try {
-      // 1. Check if the power bank has any active rentals
       const { data: activeRentals, error: checkError } = await supabase
         .from('rentals')
         .select('id, status')
@@ -90,7 +89,6 @@ export default function AdminPowerBanks() {
         return;
       }
 
-      // 2. Proceed with deletion
       const { error } = await supabase
         .from('power_banks')
         .delete()
@@ -98,10 +96,10 @@ export default function AdminPowerBanks() {
       
       if (error) {
         console.error('Delete error details:', error);
-        alert(' Error deleting power bank:\n\n' + error.message);
+        alert('❌ Error deleting power bank:\n\n' + error.message);
       } else {
         alert('✅ Power bank deleted successfully!');
-        fetchPowerBanks(); // Refresh the list
+        fetchPowerBanks();
       }
     } catch (err: any) {
       console.error('Delete error:', err);
@@ -170,7 +168,6 @@ export default function AdminPowerBanks() {
         </div>
       )}
 
-      {/* Add Power Bank Form */}
       {showAddForm && (
         <div style={{ backgroundColor: '#f0f9ff', padding: '25px', borderRadius: '12px', border: '2px solid #bae6fd', marginBottom: '25px' }}>
           <h2 style={{ margin: '0 0 20px 0', fontSize: '20px', color: '#0369a1' }}>Add New Power Bank</h2>
@@ -223,7 +220,6 @@ export default function AdminPowerBanks() {
         </div>
       )}
 
-      {/* Power Banks List */}
       {powerBanks.length === 0 ? (
         <p style={{ textAlign: 'center', color: '#64748b' }}>No power banks found.</p>
       ) : (
@@ -231,11 +227,12 @@ export default function AdminPowerBanks() {
           {powerBanks.map((pb) => {
             const statusInfo = getStatusColor(pb.status);
             const ownershipInfo = getOwnershipBadge(pb.ownership_type || 'okcharge');
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://okcharge.pages.dev/staff/pb?code=${pb.pb_code}`;
             
             return (
               <div key={pb.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <h3 style={{ margin: '0 0 5px 0', fontSize: '18px', color: '#0f172a', fontFamily: 'monospace' }}>{pb.pb_code}</h3>
                     <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>📍 {pb.locations?.name || 'Unassigned'}</p>
                   </div>
@@ -257,8 +254,27 @@ export default function AdminPowerBanks() {
                     </span>
                   </div>
                 </div>
+
+                {/* QR Code for Power Bank */}
+                <div style={{ 
+                  backgroundColor: '#f8fafc', 
+                  padding: '15px', 
+                  borderRadius: '8px', 
+                  marginBottom: '15px', 
+                  textAlign: 'center',
+                  border: '2px dashed #cbd5e1'
+                }}>
+                  <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#64748b', fontWeight: 'bold' }}>📱 Power Bank QR Code</p>
+                  <img 
+                    src={qrUrl} 
+                    alt={`QR Code for ${pb.pb_code}`}
+                    style={{ width: '150px', height: '150px' }}
+                  />
+                  <p style={{ margin: '10px 0 0 0', fontSize: '11px', color: '#94a3b8' }}>
+                    Scan to manage this power bank
+                  </p>
+                </div>
                 
-                {/* Status Change Buttons */}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '15px' }}>
                   <button 
                     onClick={() => handleStatusChange(pb.id, 'available')}
@@ -310,7 +326,6 @@ export default function AdminPowerBanks() {
                   </button>
                 </div>
 
-                {/* Delete Button */}
                 <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '15px', textAlign: 'right' }}>
                   <button 
                     onClick={() => handleDelete(pb.id)}
