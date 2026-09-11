@@ -2,14 +2,55 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 
 export default function PrintQRPage() {
+  const router = useRouter();
   const [locations, setLocations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    fetchLocations();
+    checkAuth();
   }, []);
+
+  useEffect(() => {
+    if (isAuthorized) {
+      fetchLocations();
+    }
+  }, [isAuthorized]);
+
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      router.push('/auth/admin-login');
+      return;
+    }
+
+    // Check if user is admin
+    if (user.email === 'tvicglobal@gmail.com') {
+      setIsAuthorized(true);
+      return;
+    }
+
+    // Check if user is staff
+    const { data: staffData } = await supabase
+      .from('staff')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single();
+
+    if (staffData) {
+      setIsAuthorized(true);
+      return;
+    }
+
+    // Not authorized
+    alert('Access denied. Only admin and staff can print QR codes.');
+    router.push('/');
+  };
 
   const fetchLocations = async () => {
     const { data, error } = await supabase
@@ -26,17 +67,25 @@ export default function PrintQRPage() {
     window.print();
   };
 
+  if (!isAuthorized) {
+    return (
+      <main style={{ padding: '20px', textAlign: 'center', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ fontSize: '18px', color: '#64748b' }}>🔒 Checking authorization...</p>
+      </main>
+    );
+  }
+
   if (loading) return <main style={{ padding: '20px', textAlign: 'center' }}>Loading locations...</main>;
 
   return (
     <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '1000px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }} className="no-print">
-        <h1 style={{ fontSize: '24px', margin: 0 }}>️ Print Location QR Codes</h1>
+        <h1 style={{ fontSize: '24px', margin: 0 }}>📍 Print Location QR Codes</h1>
         <button 
           onClick={handlePrint}
           style={{ backgroundColor: '#2563eb', color: 'white', padding: '10px 20px', borderRadius: '8px', border: 'none', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}
         >
-          🖨️ Print Page
+          ️ Print Page
         </button>
       </div>
 
@@ -49,7 +98,6 @@ export default function PrintQRPage() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '30px' }}>
           {locations.map((loc) => {
-            // Generate the QR code URL
             const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://okcharge.pages.dev/rent?location=${loc.id}`;
             
             return (
@@ -70,7 +118,6 @@ export default function PrintQRPage() {
         </div>
       )}
 
-      {/* Print Styles */}
       <style jsx global>{`
         @media print {
           .no-print { display: none !important; }
