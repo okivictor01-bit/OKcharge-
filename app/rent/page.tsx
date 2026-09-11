@@ -86,6 +86,15 @@ export default function RentPage() {
 
   useEffect(() => { 
     fetchLocations(); 
+    
+    // Check if a location ID is in the URL (from QR code)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const locId = params.get('location');
+      if (locId) {
+        setSelectedLocation(locId);
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -148,7 +157,9 @@ export default function RentPage() {
     }
     
     setFilteredLocations(filtered);
-    setSelectedLocation('');
+    if (!selectedLocation || !filtered.find(loc => loc.id === selectedLocation)) {
+      setSelectedLocation('');
+    }
   };
 
   const clearSearch = () => {
@@ -318,7 +329,7 @@ export default function RentPage() {
             
             <form onSubmit={handlePayment}>
               <div style={{ backgroundColor: '#f0f9ff', padding: '20px', borderRadius: '12px', border: '1px solid #bae6fd', marginBottom: '20px' }}>
-                <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#0369a1' }}>🔍 Find a Station</h3>
+                <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#0369a1' }}> Find a Station</h3>
                 
                 <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', fontSize: '14px' }}>State *</label>
                 <select 
@@ -394,7 +405,7 @@ export default function RentPage() {
               <select style={selectStyle} value={duration} onChange={(e) => setDuration(e.target.value)}>
                 <option value="1">1 hour - ₦100</option>
                 <option value="3">3 hours - ₦200</option>
-                <option value="5">5 hours - ₦300</option>
+                <option value="5">5 hours - 300</option>
                 <option value="24">24 hours - ₦800</option>
               </select>
 
