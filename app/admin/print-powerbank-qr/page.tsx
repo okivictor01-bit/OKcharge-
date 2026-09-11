@@ -12,17 +12,53 @@ export default function PrintPowerBankQRPage() {
   const [powerBanks, setPowerBanks] = useState<any[]>([]);
   const [locationName, setLocationName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    if (locationId) {
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
+    if (isAuthorized && locationId) {
       fetchData();
     }
-  }, [locationId]);
+  }, [isAuthorized, locationId]);
+
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      router.push('/auth/admin-login');
+      return;
+    }
+
+    // Check if user is admin
+    if (user.email === 'tvicglobal@gmail.com') {
+      setIsAuthorized(true);
+      return;
+    }
+
+    // Check if user is staff
+    const { data: staffData } = await supabase
+      .from('staff')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single();
+
+    if (staffData) {
+      setIsAuthorized(true);
+      return;
+    }
+
+    // Not authorized
+    alert('Access denied. Only admin and staff can print QR codes.');
+    router.push('/');
+  };
 
   const fetchData = async () => {
     setLoading(true);
     
-    // Get location name
     const { data: locData } = await supabase
       .from('locations')
       .select('name')
@@ -33,7 +69,6 @@ export default function PrintPowerBankQRPage() {
       setLocationName(locData.name);
     }
 
-    // Get all power banks for this location
     const { data: pbData } = await supabase
       .from('power_banks')
       .select('*')
@@ -49,6 +84,14 @@ export default function PrintPowerBankQRPage() {
   const handlePrint = () => {
     window.print();
   };
+
+  if (!isAuthorized) {
+    return (
+      <main style={{ padding: '20px', textAlign: 'center', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ fontSize: '18px', color: '#64748b' }}>🔒 Checking authorization...</p>
+      </main>
+    );
+  }
 
   if (loading) return <main style={{ padding: '20px', textAlign: 'center' }}>Loading...</main>;
 
@@ -76,7 +119,7 @@ export default function PrintPowerBankQRPage() {
     <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }} className="no-print">
         <div>
-          <h1 style={{ fontSize: '24px', margin: '0 0 5px 0' }}>🔋 Power Bank QR Codes</h1>
+          <h1 style={{ fontSize: '24px', margin: '0 0 5px 0' }}> Power Bank QR Codes</h1>
           <p style={{ color: '#64748b', margin: 0 }}>Location: <strong>{locationName}</strong></p>
         </div>
         <button 
@@ -131,7 +174,6 @@ export default function PrintPowerBankQRPage() {
         <a href="/admin/locations" style={{ color: '#2563eb', textDecoration: 'none' }}>← Back to Locations</a>
       </div>
 
-      {/* Print Styles */}
       <style jsx global>{`
         @media print {
           .no-print { display: none !important; }
