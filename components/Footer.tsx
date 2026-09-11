@@ -45,8 +45,8 @@ export default function Footer() {
           {/* Contact Info */}
           <div>
             <h4 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 15px 0', color: '#0f172a' }}>Contact Us</h4>
-            <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 8px 0' }}>📍 Lagos, Nigeria</p>
-            <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 8px 0' }}> +234 703 238 5674</p>
+            <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 8px 0' }}>📍 Akure, Ondo State, Nigeria</p>
+            <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 8px 0' }}>📞 +234 703 238 5674</p>
             <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>✉️ support@okcharge.ng</p>
           </div>
         </div>
