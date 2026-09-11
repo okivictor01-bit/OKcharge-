@@ -25,12 +25,12 @@ export default function FAQPage() {
     },
     { 
       question: 'How much does it cost?', 
-      answer: 'Our pricing is simple and affordable:
+      answer: `Our pricing is simple and affordable:
 • 1 Hour - ₦100
 • 3 Hours - ₦200
 • 5 Hours - ₦300
 • 24 Hours - ₦800
-Choose the duration that fits your needs!' 
+Choose the duration that fits your needs!` 
     },
     { 
       question: 'What happens if I return the power bank late?', 
@@ -62,11 +62,11 @@ Choose the duration that fits your needs!'
     },
     { 
       question: 'How do I contact customer support?', 
-      answer: 'You can reach us via:
+      answer: `You can reach us via:
 • WhatsApp: +234 703 238 5674 (fastest response)
 • Email: support@okcharge.ng
 • Click the green WhatsApp button on any page of our website
-We typically respond within minutes during business hours!' 
+We typically respond within minutes during business hours!` 
     }
   ];
 
