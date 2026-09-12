@@ -3,28 +3,35 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
+// Make sure this matches your admin email EXACTLY (case-insensitive check is added below)
 const ADMIN_EMAIL = 'tvicglobal@gmail.com'; 
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [userRole, setUserRole] = useState<'admin' | 'staff' | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
+        console.log('No session found, redirecting to login');
         window.location.href = '/auth/admin-login';
         return;
       }
 
-      // Check if user is admin
-      if (session.user.email === ADMIN_EMAIL) {
+      const userEmail = session.user.email?.toLowerCase() || '';
+      console.log('🔍 Detected User Email:', userEmail);
+      console.log('🔍 Expected Admin Email:', ADMIN_EMAIL.toLowerCase());
+
+      // Check if user is admin (case-insensitive)
+      if (userEmail === ADMIN_EMAIL.toLowerCase()) {
+        console.log('✅ User is Admin');
         setIsAuthorized(true);
         setUserRole('admin');
+        setLoading(false);
         return;
       }
 
@@ -37,12 +44,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         .single();
 
       if (staffData) {
+        console.log('✅ User is Staff');
         setIsAuthorized(true);
         setUserRole('staff');
+        setLoading(false);
         return;
       }
 
       // Not authorized
+      console.log('❌ User not authorized, redirecting to home');
       window.location.href = '/';
     };
 
@@ -54,7 +64,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     window.location.href = userRole === 'staff' ? '/auth/staff-login' : '/auth/admin-login';
   };
 
-  if (!isAuthorized) {
+  if (loading || !isAuthorized) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f8fafc' }}>
         <p style={{ fontSize: '18px', color: '#64748b' }}>🔒 Verifying access...</p>
