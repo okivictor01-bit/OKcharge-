@@ -44,6 +44,9 @@ export default function AdminStaffManagement() {
     }
 
     try {
+      console.log(' Attempting to create staff...');
+      console.log('Email:', newStaff.email);
+      
       const { data, error } = await supabase.functions.invoke('create-staff', {
         body: {
           email: newStaff.email,
@@ -52,7 +55,13 @@ export default function AdminStaffManagement() {
         }
       });
 
-      if (error) throw error;
+      console.log('Response data:', data);
+      console.log('Response error:', error);
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
       if (data && data.success) {
         setMessage(`✅ Staff created successfully! Temporary password: ${newStaff.temp_password}`);
@@ -60,11 +69,19 @@ export default function AdminStaffManagement() {
         setShowAddForm(false);
         fetchStaff();
       } else {
-        setMessage('❌ Error: ' + (data?.error || 'Unknown error occurred'));
+        throw new Error(data?.error || 'Unknown error occurred');
       }
     } catch (error: any) {
-      setMessage('❌ Error: ' + error.message);
-      console.error('Create staff error:', error);
+      console.error('Full error details:', error);
+      
+      // More detailed error messages
+      if (error.message.includes('email')) {
+        setMessage('❌ This email address is already registered. Please use a different email.');
+      } else if (error.message.includes('function')) {
+        setMessage('❌ Cannot connect to server. Please check your internet connection and try again.');
+      } else {
+        setMessage('❌ Error: ' + (error.message || 'Failed to create staff account'));
+      }
     }
     setSaving(false);
   };
