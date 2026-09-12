@@ -2,14 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function PrintPowerBankQRPage() {
-  const searchParams = useSearchParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const locationId = searchParams.get('location');
   
   const [powerBanks, setPowerBanks] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
   const [locationName, setLocationName] = useState('');
   const [loading, setLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -19,8 +20,11 @@ export default function PrintPowerBankQRPage() {
   }, []);
 
   useEffect(() => {
-    if (isAuthorized && locationId) {
-      fetchData();
+    if (isAuthorized) {
+      fetchLocations();
+      if (locationId) {
+        fetchPowerBanks();
+      }
     }
   }, [isAuthorized, locationId]);
 
@@ -32,11 +36,13 @@ export default function PrintPowerBankQRPage() {
       return;
     }
 
+    // Check if user is admin
     if (user.email === 'tvicglobal@gmail.com') {
       setIsAuthorized(true);
       return;
     }
 
+    // Check if user is staff
     const { data: staffData } = await supabase
       .from('staff')
       .select('*')
@@ -49,37 +55,58 @@ export default function PrintPowerBankQRPage() {
       return;
     }
 
+    // Not authorized
     alert('Access denied. Only admin and staff can print QR codes.');
     router.push('/');
   };
 
-  const fetchData = async () => {
+  const fetchLocations = async () => {
+    const { data, error } = await supabase
+      .from('locations')
+      .select('id, name')
+      .eq('status', 'active')
+      .order('name');
+    
+    if (!error && data) {
+      setLocations(data);
+    }
+  };
+
+  const fetchPowerBanks = async () => {
     setLoading(true);
     
-    const { data: locData } = await supabase
-      .from('locations')
-      .select('name')
-      .eq('id', locationId)
-      .single();
-    
-    if (locData) {
-      setLocationName(locData.name);
-    }
+    if (locationId) {
+      // Get location name
+      const { data: locData } = await supabase
+        .from('locations')
+        .select('name')
+        .eq('id', locationId)
+        .single();
+      
+      if (locData) {
+        setLocationName(locData.name);
+      }
 
-    const { data: pbData } = await supabase
-      .from('power_banks')
-      .select('*')
-      .eq('location_id', locationId)
-      .order('pb_code');
-    
-    if (pbData) {
-      setPowerBanks(pbData);
+      // Get all power banks for this location
+      const { data: pbData, error } = await supabase
+        .from('power_banks')
+        .select('*')
+        .eq('location_id', locationId)
+        .order('pb_code');
+      
+      if (!error && pbData) {
+        setPowerBanks(pbData);
+      }
     }
     setLoading(false);
   };
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleLocationSelect = (locId: string) => {
+    router.push(`/admin/print-powerbank-qr?location=${locId}`);
   };
 
   if (!isAuthorized) {
@@ -90,45 +117,28 @@ export default function PrintPowerBankQRPage() {
     );
   }
 
-  if (loading) return <main style={{ padding: '20px', textAlign: 'center' }}>Loading...</main>;
-
-  if (!locationId) {
-    return (
-      <main style={{ padding: '20px', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
-        <h1 style={{ fontSize: '24px', marginBottom: '20px' }}>Select a Location</h1>
-        <p style={{ color: '#64748b', marginBottom: '30px' }}>Please select a location to print QR codes.</p>
-        <a href="/admin/locations" style={{ 
-          display: 'inline-block',
-          backgroundColor: '#2563eb', 
-          color: 'white', 
-          padding: '12px 24px', 
-          borderRadius: '8px', 
-          textDecoration: 'none',
-          fontWeight: 'bold' 
-        }}>
-          ← Back to Locations
-        </a>
-      </main>
-    );
+  if (loading && locationId && powerBanks.length === 0) {
+    return <main style={{ padding: '20px', textAlign: 'center' }}>Loading power banks...</main>;
   }
 
   return (
     <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }} className="no-print">
         <div>
-          <h1 style={{ fontSize: '24px', margin: '0 0 5px 0' }}>🔋 Power Bank QR Codes</h1>
-          <p style={{ color: '#64748b', margin: 0 }}>Location: <strong>{locationName}</strong></p>
-          <p style={{ color: '#94a3b8', margin: '5px 0 0 0', fontSize: '14px' }}>Total: {powerBanks.length} power banks</p>
+          <h1 style={{ fontSize: '24px', margin: '0 0 5px 0' }}> Power Bank QR Codes</h1>
+          {locationName && <p style={{ color: '#64748b', margin: 0 }}>Location: <strong>{locationName}</strong></p>}
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button 
-            onClick={handlePrint}
-            style={{ backgroundColor: '#2563eb', color: 'white', padding: '12px 24px', borderRadius: '8px', border: 'none', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}
-          >
-            🖨️ Print A4 Sheet
-          </button>
+          {powerBanks.length > 0 && (
+            <button 
+              onClick={handlePrint}
+              style={{ backgroundColor: '#2563eb', color: 'white', padding: '12px 24px', borderRadius: '8px', border: 'none', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              🖨️ Print QR Codes
+            </button>
+          )}
           <a 
-            href="/admin/locations"
+            href="/admin/dashboard"
             style={{ backgroundColor: '#6b7280', color: 'white', padding: '12px 24px', borderRadius: '8px', textDecoration: 'none', fontSize: '14px', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}
           >
             ← Back
@@ -136,41 +146,104 @@ export default function PrintPowerBankQRPage() {
         </div>
       </div>
 
-      <div className="no-print" style={{ backgroundColor: '#f0f9ff', padding: '15px', borderRadius: '8px', marginBottom: '30px', border: '1px solid #bae6fd' }}>
-        <p style={{ margin: 0, fontSize: '14px', color: '#0369a1' }}>
-          💡 <strong>Print Tip:</strong> This page is optimized for A4 paper. Each QR code card will fit perfectly. Use "Fit to page" in your printer settings.
-        </p>
-      </div>
-
-      {powerBanks.length === 0 ? (
-        <p style={{ textAlign: 'center', color: '#64748b', padding: '40px' }}>No power banks found for this location.</p>
-      ) : (
-        <div className="qr-grid">
-          {powerBanks.map((pb) => {
-            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://okcharge.pages.dev/staff/pb?code=${pb.pb_code}`;
-            
-            return (
-              <div key={pb.id} className="qr-card">
-                <img 
-                  src={qrUrl} 
-                  alt={`QR Code for ${pb.pb_code}`}
-                  className="qr-image"
-                />
-                <div className="qr-info">
-                  <h3 className="qr-code">{pb.pb_code}</h3>
-                  <p className="qr-location">{locationName}</p>
-                  <p className="qr-status">
-                    Status: <strong>{pb.status.toUpperCase()}</strong>
-                  </p>
-                </div>
-              </div>
-            );
-          })}
+      {/* Location Selector */}
+      {!locationId && (
+        <div className="no-print" style={{ backgroundColor: '#f0f9ff', padding: '30px', borderRadius: '12px', border: '2px solid #bae6fd', marginBottom: '30px' }}>
+          <h2 style={{ margin: '0 0 20px 0', fontSize: '20px', color: '#0369a1' }}>Select a Location</h2>
+          <p style={{ color: '#64748b', marginBottom: '20px' }}>Choose a location to print QR codes for its power banks:</p>
+          
+          {locations.length === 0 ? (
+            <p style={{ color: '#64748b', textAlign: 'center', padding: '20px' }}>No active locations found.</p>
+          ) : (
+            <div style={{ display: 'grid', gap: '10px' }}>
+              {locations.map((loc) => (
+                <button
+                  key={loc.id}
+                  onClick={() => handleLocationSelect(loc.id)}
+                  style={{
+                    padding: '15px 20px',
+                    backgroundColor: 'white',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: '#0f172a',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#eff6ff';
+                    e.currentTarget.style.borderColor = '#3b82f6';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'white';
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                  }}
+                >
+                  📍 {loc.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
+      {/* Power Bank QR Codes */}
+      {locationId && powerBanks.length === 0 && !loading && (
+        <div style={{ textAlign: 'center', padding: '40px', backgroundColor: '#f8fafc', borderRadius: '12px' }}>
+          <p style={{ fontSize: '48px', marginBottom: '15px' }}>📭</p>
+          <h3 style={{ color: '#64748b', marginBottom: '10px' }}>No Power Banks Found</h3>
+          <p style={{ color: '#94a3b8', marginBottom: '20px' }}>This location doesn't have any power banks yet.</p>
+          <a 
+            href="/admin/powerbanks"
+            style={{ 
+              display: 'inline-block',
+              backgroundColor: '#2563eb', 
+              color: 'white', 
+              padding: '12px 24px', 
+              borderRadius: '8px', 
+              textDecoration: 'none',
+              fontWeight: 'bold' 
+            }}
+          >
+            + Add Power Banks
+          </a>
+        </div>
+      )}
+
+      {powerBanks.length > 0 && (
+        <>
+          <p style={{ color: '#64748b', marginBottom: '30px', fontSize: '14px' }} className="no-print">
+            Print these QR codes and stick them on each power bank. Staff can scan to manage rentals.
+          </p>
+
+          <div className="qr-grid">
+            {powerBanks.map((pb) => {
+              const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://okcharge.pages.dev/staff/pb?code=${pb.pb_code}`;
+              
+              return (
+                <div key={pb.id} className="qr-card">
+                  <img 
+                    src={qrUrl} 
+                    alt={`QR Code for ${pb.pb_code}`}
+                    className="qr-image"
+                  />
+                  <div className="qr-info">
+                    <h3 className="qr-code">{pb.pb_code}</h3>
+                    <p className="qr-location">{locationName}</p>
+                    <p className="qr-status">
+                      Status: <strong>{pb.status?.toUpperCase() || 'AVAILABLE'}</strong>
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
       <style jsx global>{`
-        /* Grid layout for QR codes - 3 columns for A4 */
         .qr-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
@@ -178,7 +251,6 @@ export default function PrintPowerBankQRPage() {
           padding: 20px;
         }
 
-        /* Individual QR card */
         .qr-card {
           border: 2px solid #e2e8f0;
           border-radius: 12px;
@@ -191,14 +263,12 @@ export default function PrintPowerBankQRPage() {
           align-items: center;
         }
 
-        /* QR code image */
         .qr-image {
           width: 120px;
           height: 120px;
           margin-bottom: 10px;
         }
 
-        /* QR info section */
         .qr-info {
           width: 100%;
         }
@@ -227,7 +297,6 @@ export default function PrintPowerBankQRPage() {
           color: #10b981;
         }
 
-        /* Print-specific styles for A4 */
         @media print {
           @page {
             size: A4;
@@ -280,7 +349,6 @@ export default function PrintPowerBankQRPage() {
           }
         }
 
-        /* Responsive for mobile */
         @media screen and (max-width: 768px) {
           .qr-grid {
             grid-template-columns: repeat(2, 1fr);
