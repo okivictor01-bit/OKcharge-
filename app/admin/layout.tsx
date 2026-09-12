@@ -3,51 +3,65 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const ADMIN_EMAIL = 'tvicglobal@gmail.com'; 
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [userRole, setUserRole] = useState<'admin' | 'staff' | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
-        window.location.href = '/auth/admin-login';
+        router.push('/auth/admin-login');
         return;
       }
 
-      if (session.user.email !== ADMIN_EMAIL) {
-        const { data: owner } = await supabase
-          .from('location_owners')
-          .select('id')
-          .eq('user_id', session.user.id)
-          .single();
-
-        if (owner) {
-          window.location.href = '/owner/dashboard';
-        } else {
-          window.location.href = '/';
-        }
+      // Check if user is admin
+      if (session.user.email === ADMIN_EMAIL) {
+        setIsAuthorized(true);
+        setUserRole('admin');
         return;
       }
 
-      setIsAuthorized(true);
+      // Check if user is staff
+      const { data: staffData } = await supabase
+        .from('staff')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .eq('is_active', true)
+        .single();
+
+      if (staffData) {
+        setIsAuthorized(true);
+        setUserRole('staff');
+        return;
+      }
+
+      // Not authorized
+      router.push('/');
     };
 
     checkAuth();
-  }, []);
+  }, [router]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = '/auth/admin-login';
+    if (userRole === 'staff') {
+      window.location.href = '/auth/staff-login';
+    } else {
+      window.location.href = '/auth/admin-login';
+    }
   };
 
   if (!isAuthorized) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f8fafc' }}>
-        <p style={{ fontSize: '18px', color: '#64748b' }}>🔒 Verifying admin access...</p>
+        <p style={{ fontSize: '18px', color: '#64748b' }}> Verifying access...</p>
       </div>
     );
   }
@@ -63,7 +77,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         alignItems: 'center',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}>
-        <Link href="/admin/dashboard" style={{ 
+        <Link href={userRole === 'staff' ? '/staff/dashboard' : '/admin/dashboard"} style={{ 
           textDecoration: 'none', 
           display: 'flex',
           alignItems: 'center'
@@ -72,7 +86,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </Link>
         
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-          <Link href="/admin/dashboard" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Dashboard</Link>
+          <Link href={userRole === 'staff' ? '/staff/dashboard' : "/admin/dashboard"} style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Dashboard</Link>
           <Link href="/admin/locations" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Locations</Link>
           <Link href="/admin/owners" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Owners</Link>
           <button 
