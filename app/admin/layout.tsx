@@ -17,7 +17,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
-        router.push('/auth/admin-login');
+        window.location.href = '/auth/admin-login';
         return;
       }
 
@@ -43,28 +43,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       }
 
       // Not authorized
-      router.push('/');
+      window.location.href = '/';
     };
 
     checkAuth();
-  }, [router]);
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    if (userRole === 'staff') {
-      window.location.href = '/auth/staff-login';
-    } else {
-      window.location.href = '/auth/admin-login';
-    }
+    window.location.href = userRole === 'staff' ? '/auth/staff-login' : '/auth/admin-login';
   };
 
   if (!isAuthorized) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f8fafc' }}>
-        <p style={{ fontSize: '18px', color: '#64748b' }}> Verifying access...</p>
+        <p style={{ fontSize: '18px', color: '#64748b' }}>🔒 Verifying access...</p>
       </div>
     );
   }
+
+  // Determine where the "Dashboard" link should go based on role
+  const dashboardLink = userRole === 'staff' ? '/staff/dashboard' : '/admin/dashboard';
 
   return (
     <>
@@ -77,7 +76,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         alignItems: 'center',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}>
-        <Link href={userRole === 'staff' ? '/staff/dashboard' : '/admin/dashboard"} style={{ 
+        <Link href={dashboardLink} style={{ 
           textDecoration: 'none', 
           display: 'flex',
           alignItems: 'center'
@@ -86,7 +85,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </Link>
         
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-          <Link href={userRole === 'staff' ? '/staff/dashboard' : "/admin/dashboard"} style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Dashboard</Link>
+          <Link href={dashboardLink} style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Dashboard</Link>
           <Link href="/admin/locations" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Locations</Link>
           <Link href="/admin/owners" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Owners</Link>
           <button 
