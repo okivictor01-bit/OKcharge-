@@ -61,7 +61,7 @@ export default function HomePage() {
         borderBottomLeftRadius: '40px',
         borderBottomRightRadius: '40px',
         overflow: 'hidden',
-        backgroundColor: '#0f172a' // Fallback color
+        backgroundColor: '#0f172a'
       }}>
         {/* The Background Image */}
         <img 
@@ -78,7 +78,7 @@ export default function HomePage() {
           }}
         />
         
-        {/* The Dark Overlay (makes text readable) */}
+        {/* The Dark Overlay */}
         <div style={{
           position: 'absolute',
           top: 0,
@@ -172,7 +172,7 @@ export default function HomePage() {
         
         <div style={{ display: 'grid', gap: '25px' }}>
           {[
-            { step: '1', icon: '📷', title: 'Scan the QR Code', desc: 'Find an OKcharge station and scan the location QR code with your phone camera.' },
+            { step: '1', icon: '', title: 'Scan the QR Code', desc: 'Find an OKcharge station and scan the location QR code with your phone camera.' },
             { step: '2', icon: '💳', title: 'Pay Securely', desc: 'Choose your rental duration and pay safely via Paystack. No hidden fees.' },
             { step: '3', icon: '🔋', title: 'Collect & Go', desc: 'Show your rental ticket to the staff, collect your fully charged power bank, and go!' },
             { step: '4', icon: '🔄', title: 'Return Easily', desc: 'Bring it back to any OKcharge partner location before your time runs out.' }
@@ -212,6 +212,30 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Become Our Partner Section */}
+      <div style={{ backgroundColor: '#f0fdf4', padding: '60px 20px', textAlign: 'center' }}>
+        <h2 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', marginBottom: '15px' }}>Become Our Partner</h2>
+        <p style={{ fontSize: '16px', color: '#64748b', marginBottom: '30px', maxWidth: '600px', margin: '0 auto 30px' }}>
+          Own a restaurant, café, or high-traffic location? Partner with OKcharge and earn passive income from power bank rentals at your venue.
+        </p>
+        <Link 
+          href="/auth/register" 
+          style={{ 
+            display: 'inline-block',
+            padding: '14px 30px', 
+            backgroundColor: '#10b981', 
+            color: 'white', 
+            borderRadius: '10px', 
+            textDecoration: 'none', 
+            fontWeight: '700',
+            fontSize: '16px',
+            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+          }}
+        >
+          Register as Partner
+        </Link>
+      </div>
+
       {/* Footer CTA */}
       <div style={{ backgroundColor: '#0f172a', color: 'white', padding: '50px 20px', textAlign: 'center' }}>
         <h2 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 20px 0' }}>Ready to stay charged?</h2>
@@ -234,8 +258,6 @@ export default function HomePage() {
         
         <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap', marginBottom: '30px' }}>
           <Link href="/auth/login" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Partner Login</Link>
-          <Link href="/auth/admin-login" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Admin Login</Link>
-          <Link href="/auth/staff-login" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Staff Login</Link>
         </div>
 
         <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
