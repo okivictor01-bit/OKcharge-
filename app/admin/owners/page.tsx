@@ -2,318 +2,60 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 
-interface Owner {
-  id: string;
-  business_name: string;
-  phone: string;
-  email: string;
-  revenue_share_percentage: number;
-  status: string;
-  created_at: string;
-}
-
-interface Location {
-  id: string;
-  name: string;
-  address: string;
-  owner_id: string | null;
-}
-
-export default function ManageOwnersPage() {
-  const [owners, setOwners] = useState<Owner[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
+export default function AdminOwners() {
+  const router = useRouter();
+  const [owners, setOwners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState('');
-  const [selectedOwnerId, setSelectedOwnerId] = useState<string | null>(null);
-  const [selectedLocationId, setSelectedLocationId] = useState('');
-  
-  // New states for editing revenue share
-  const [editingShareId, setEditingShareId] = useState<string | null>(null);
-  const [tempShare, setTempShare] = useState<number>(30);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchOwners(); }, []);
 
-  const fetchData = async () => {
+  const fetchOwners = async () => {
     setLoading(true);
-    
-    const { data: ownersData } = await supabase
-      .from('location_owners')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    const { data: locationsData } = await supabase
-      .from('locations')
-      .select('id, name, address, owner_id');
-
-    setOwners(ownersData || []);
-    setLocations(locationsData || []);
+    const { data, error } = await supabase.from('location_owners').select('*').order('created_at', { ascending: false });
+    if (!error) setOwners(data || []);
     setLoading(false);
   };
 
-  const handleApprove = async (ownerId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'approved' ? 'pending' : 'approved';
-    
-    const { error } = await supabase
-      .from('location_owners')
-      .update({ status: newStatus })
-      .eq('id', ownerId);
+  // NEW: Reset Password Function
+  const handleResetPassword = async (userId: string, businessName: string) => {
+    const newPassword = prompt(`Enter a new temporary password for ${businessName} (min 6 characters):`);
+    if (!newPassword) return;
+    if (newPassword.length < 6) { alert('❌ Password must be at least 6 characters.'); return; }
 
-    if (error) {
-      setMessage('Error: ' + error.message);
-    } else {
-      setMessage(`Owner ${newStatus === 'approved' ? 'approved' : 'set to pending'} successfully!`);
-      fetchData();
-    }
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const response = await fetch(`${supabaseUrl}/functions/v1/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseKey}` },
+        body: JSON.stringify({ user_id: userId, new_password: newPassword }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      alert(`✅ Password for ${businessName} reset successfully! New password: ${newPassword}`);
+    } catch (error: any) { alert('❌ Error: ' + error.message); }
   };
 
-  const handleUpdateRevenueShare = async (ownerId: string) => {
-    if (tempShare < 0 || tempShare > 100) {
-      setMessage('Revenue share must be between 0 and 100');
-      return;
-    }
-
-    const { error } = await supabase
-      .from('location_owners')
-      .update({ revenue_share_percentage: tempShare })
-      .eq('id', ownerId);
-
-    if (error) {
-      setMessage('Error: ' + error.message);
-    } else {
-      setMessage('Revenue share updated successfully!');
-      setEditingShareId(null);
-      fetchData();
-    }
+  const handleDelete = async (id: string, userId: string) => {
+    if (!window.confirm('Delete this owner?')) return;
+    try {
+      await supabase.from('location_owners').delete().eq('id', id);
+      await supabase.auth.admin.deleteUser(userId);
+      fetchOwners();
+      alert('✅ Deleted.');
+    } catch (error: any) { alert('❌ Error: ' + error.message); }
   };
 
-  const handleAssignLocation = async () => {
-    if (!selectedOwnerId || !selectedLocationId) {
-      setMessage('Please select both owner and location');
-      return;
-    }
-
-    const { error } = await supabase
-      .from('locations')
-      .update({ owner_id: selectedOwnerId })
-      .eq('id', selectedLocationId);
-
-    if (error) {
-      setMessage('Error: ' + error.message);
-    } else {
-      setMessage('Location assigned successfully!');
-      setSelectedOwnerId(null);
-      setSelectedLocationId('');
-      fetchData();
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-NG', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
-
-  if (loading) {
-    return <main style={{ padding: '20px', textAlign: 'center' }}>Loading...</main>;
-  }
+  if (loading) return <main style={{ padding: '20px', textAlign: 'center' }}>Loading...</main>;
 
   return (
     <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '800px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-        <h1 style={{ fontSize: '24px', margin: 0 }}>Manage Location Owners</h1>
-        <a href="/admin/dashboard" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 'bold' }}>
-          ← Back to Dashboard
-        </a>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+        <h1 style={{ fontSize: '24px', margin: 0 }}>Manage Owners ({owners.length})</h1>
+        <a href="/auth/register" style={{ backgroundColor: '#2563eb', color: 'white', padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', fontWeight: 'bold' }}>+ Add New</a>
       </div>
 
-      {message && (
-        <div style={{ 
-          padding: '15px', 
-          borderRadius: '8px', 
-          marginBottom: '20px',
-          backgroundColor: message.includes('Error') || message.includes('must be') ? '#fee2e2' : '#dcfce7',
-          color: message.includes('Error') || message.includes('must be') ? '#b91c1c' : '#15803d'
-        }}>
-          {message}
-          <button onClick={() => setMessage('')} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
-        </div>
-      )}
-
-      {/* Assign Location Section */}
-      <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '25px' }}>
-        <h2 style={{ marginTop: 0, marginBottom: '15px' }}>Assign Location to Owner</h2>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <select
-            value={selectedOwnerId || ''}
-            onChange={(e) => setSelectedOwnerId(e.target.value)}
-            style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
-          >
-            <option value="">Select Owner</option>
-            {owners.map(owner => (
-              <option key={owner.id} value={owner.id}>{owner.business_name}</option>
-            ))}
-          </select>
-          
-          <select
-            value={selectedLocationId}
-            onChange={(e) => setSelectedLocationId(e.target.value)}
-            style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
-          >
-            <option value="">Select Location</option>
-            {locations.filter(loc => !loc.owner_id).map(loc => (
-              <option key={loc.id} value={loc.id}>{loc.name}</option>
-            ))}
-          </select>
-          
-          <button
-            onClick={handleAssignLocation}
-            style={{ padding: '12px 20px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-          >
-            Assign
-          </button>
-        </div>
-        <p style={{ fontSize: '12px', color: '#64748b', marginTop: '10px' }}>
-          Note: Only unassigned locations are shown
-        </p>
-      </div>
-
-      {/* Owners List */}
-      <h2 style={{ marginBottom: '15px' }}>Registered Owners ({owners.length})</h2>
-      
-      {owners.length === 0 ? (
-        <div style={{ padding: '30px', backgroundColor: '#f8fafc', borderRadius: '8px', textAlign: 'center', color: '#64748b' }}>
-          No owners registered yet.
-        </div>
-      ) : (
-        owners.map(owner => {
-          const ownerLocations = locations.filter(loc => loc.owner_id === owner.id);
-          const isEditingShare = editingShareId === owner.id;
-          
-          return (
-            <div key={owner.id} style={{ 
-              padding: '20px', 
-              backgroundColor: 'white', 
-              border: '1px solid #e2e8f0', 
-              borderRadius: '12px', 
-              marginBottom: '15px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
-                <div>
-                  <h3 style={{ margin: '0 0 5px 0', fontSize: '18px' }}>{owner.business_name}</h3>
-                  <p style={{ margin: '3px 0', fontSize: '14px', color: '#64748b' }}>📞 {owner.phone}</p>
-                  <p style={{ margin: '3px 0', fontSize: '14px', color: '#64748b' }}>📧 {owner.email}</p>
-                  
-                  {/* Revenue Share Display / Edit */}
-                  <div style={{ margin: '8px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    {isEditingShare ? (
-                      <>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={tempShare}
-                          onChange={(e) => setTempShare(parseInt(e.target.value) || 0)}
-                          style={{ width: '70px', padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '14px' }}
-                        />
-                        <span style={{ fontSize: '14px', color: '#64748b' }}>% Share</span>
-                        <button
-                          onClick={() => handleUpdateRevenueShare(owner.id)}
-                          style={{ padding: '6px 12px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => { setEditingShareId(null); setTempShare(owner.revenue_share_percentage); }}
-                          style={{ padding: '6px 12px', backgroundColor: '#6b7280', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <span style={{ fontSize: '14px', color: '#64748b' }}>
-                          💰 Revenue Share: <strong>{owner.revenue_share_percentage}%</strong>
-                        </span>
-                        <button
-                          onClick={() => { setEditingShareId(owner.id); setTempShare(owner.revenue_share_percentage); }}
-                          style={{ padding: '4px 8px', backgroundColor: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
-                        >
-                          Edit
-                        </button>
-                      </>
-                    )}
-                  </div>
-
-                  <p style={{ margin: '3px 0', fontSize: '12px', color: '#94a3b8' }}>
-                    Registered: {formatDate(owner.created_at)}
-                  </p>
-                </div>
-                
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{
-                    display: 'inline-block',
-                    padding: '6px 12px',
-                    borderRadius: '20px',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    backgroundColor: owner.status === 'approved' ? '#dcfce7' : '#fef3c7',
-                    color: owner.status === 'approved' ? '#15803d' : '#b45309',
-                    marginBottom: '10px'
-                  }}>
-                    {owner.status === 'approved' ? '✓ Approved' : '⏳ Pending'}
-                  </span>
-                  
-                  <button
-                    onClick={() => handleApprove(owner.id, owner.status)}
-                    style={{
-                      display: 'block',
-                      width: '100%',
-                      padding: '8px 15px',
-                      backgroundColor: owner.status === 'approved' ? '#f59e0b' : '#10b981',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontWeight: 'bold',
-                      fontSize: '13px',
-                      cursor: 'pointer',
-                      marginTop: '5px'
-                    }}
-                  >
-                    {owner.status === 'approved' ? 'Set Pending' : 'Approve'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Owner's Locations */}
-              {ownerLocations.length > 0 && (
-                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '15px', marginTop: '15px' }}>
-                  <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold', color: '#475569' }}>
-                    Assigned Locations ({ownerLocations.length}):
-                  </p>
-                  {ownerLocations.map(loc => (
-                    <div key={loc.id} style={{ 
-                      padding: '8px 12px', 
-                      backgroundColor: '#f8fafc', 
-                      borderRadius: '6px', 
-                      marginBottom: '8px',
-                      fontSize: '14px'
-                    }}>
-                      <strong>{loc.name}</strong>
-                      <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#64748b' }}>{loc.address}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })
-      )}
-    </main>
-  );
-}
+      {owners.length === 0 ? <p style={{ textAlign: 'center', color: '#64748b' }}>No owners found.</p> : (
+        <div style={{ display: 'grid', gap: '1
