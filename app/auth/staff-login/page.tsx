@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function StaffLoginPage() {
   const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [formData, setFormData] = useState({ email: '', password: '' });
 
   const handleLogin = async (e: any) => {
     e.preventDefault();
@@ -16,17 +18,18 @@ export default function StaffLoginPage() {
     setError('');
 
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: formData.email,
-      password: formData.password,
+      email,
+      password,
     });
 
     if (error) {
-      setError('Invalid email or password.');
+      setError(error.message);
       setLoading(false);
       return;
     }
 
     if (data.user) {
+      // Check if they are active staff
       const { data: staffData } = await supabase
         .from('staff')
         .select('*')
@@ -34,17 +37,16 @@ export default function StaffLoginPage() {
         .eq('is_active', true)
         .single();
 
-      if (!staffData) {
-        await supabase.auth.signOut();
-        setError('Access denied. This account does not have staff privileges.');
-        setLoading(false);
-        return;
-      }
-
-      if (staffData.must_change_password) {
-        router.push('/staff/change-password');
+      if (staffData) {
+        if (staffData.must_change_password) {
+          router.push('/staff/change-password');
+        } else {
+          router.push('/staff/dashboard');
+        }
       } else {
-        router.push('/staff/dashboard');
+        await supabase.auth.signOut();
+        setError('Access denied. You are not an active staff member.');
+        setLoading(false);
       }
     }
   };
@@ -62,28 +64,72 @@ export default function StaffLoginPage() {
   return (
     <main style={{ padding: '40px 20px', fontFamily: 'sans-serif', maxWidth: '400px', margin: '0 auto', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-        <div style={{ fontSize: '48px', marginBottom: '10px' }}>🔐</div>
-        <h1 style={{ fontSize: '24px', color: '#0f172a', marginBottom: '10px' }}>Staff Access</h1>
-        <p style={{ color: '#64748b', fontSize: '14px' }}>Authorized OKcharge personnel only</p>
+        <img src="/logo.png" alt="OKcharge" style={{ height: '50px', marginBottom: '20px' }} />
+        <h1 style={{ fontSize: '24px', color: '#0f172a', marginBottom: '10px' }}>Staff Login</h1>
+        <p style={{ color: '#64748b', fontSize: '14px' }}>Sign in to access the staff dashboard</p>
       </div>
 
       {error && (
-        <div style={{ padding: '12px', borderRadius: '8px', marginBottom: '20px', backgroundColor: '#fee2e2', color: '#b91c1c', fontSize: '14px', textAlign: 'center' }}>
-          {error}
+        <div style={{
+          padding: '12px',
+          borderRadius: '8px',
+          marginBottom: '20px',
+          backgroundColor: '#fee2e2',
+          color: '#b91c1c',
+          fontSize: '14px',
+          textAlign: 'center'
+        }}>
+          ❌ {error}
         </div>
       )}
 
       <form onSubmit={handleLogin}>
         <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Email Address</label>
-        <input style={inputStyle} type="email" placeholder="staff@okcharge.ng" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
+        <input
+          style={inputStyle}
+          type="email"
+          placeholder="staff@okcharge.ng"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
 
         <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Password</label>
-        <input style={inputStyle} type="password" placeholder="Enter your password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required />
+        <input
+          style={inputStyle}
+          type="password"
+          placeholder="Enter your password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
 
-        <button type="submit" disabled={loading} style={{ width: '100%', padding: '15px', backgroundColor: loading ? '#999' : '#0f172a', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}>
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            width: '100%',
+            padding: '15px',
+            backgroundColor: loading ? '#999' : '#2563eb',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            cursor: 'pointer'
+          }}
+        >
           {loading ? 'Signing in...' : 'Sign In'}
         </button>
       </form>
+
+      <div style={{ textAlign: 'center', marginTop: '20px' }}>
+        <a href="/auth/forgot-password" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '14px' }}>Forgot Password?</a>
+      </div>
+
+      <div style={{ textAlign: 'center', marginTop: '20px' }}>
+        <Link href="/" style={{ color: '#64748b', textDecoration: 'none', fontSize: '14px' }}>← Back to Home</Link>
+      </div>
     </main>
   );
 }
