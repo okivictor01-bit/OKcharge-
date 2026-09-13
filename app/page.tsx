@@ -69,21 +69,44 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* Hero Section with Background Image */}
+      {/* Hero Section with Bulletproof Background Image */}
       <div style={{ 
-        background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%), url("/hero-bg.jpg")',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        color: 'white', 
+        position: 'relative',
         padding: '80px 20px 100px', 
         textAlign: 'center',
         borderBottomLeftRadius: '40px',
         borderBottomRightRadius: '40px',
-        position: 'relative',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        backgroundColor: '#0f172a' // Fallback color
       }}>
-        <div style={{ maxWidth: '600px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+        {/* The Background Image */}
+        <img 
+          src="/hero-bg.jpg" 
+          alt="Hero Background" 
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            zIndex: 0
+          }}
+        />
+        
+        {/* The Dark Overlay (makes text readable) */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.85) 100%)',
+          zIndex: 1
+        }} />
+
+        {/* The Content */}
+        <div style={{ maxWidth: '600px', margin: '0 auto', position: 'relative', zIndex: 2, color: 'white' }}>
           <div style={{ 
             display: 'inline-flex', 
             alignItems: 'center', 
@@ -108,7 +131,7 @@ export default function HomePage() {
             Never Run Out of <span style={{ color: '#34d399' }}>Battery</span> Again.
           </h1>
           
-          <p style={{ fontSize: '18px', color: '#94a3b8', margin: '0 0 35px 0', lineHeight: '1.6', maxWidth: '500px', marginLeft: 'auto', marginRight: 'auto' }}>
+          <p style={{ fontSize: '18px', color: '#cbd5e1', margin: '0 0 35px 0', lineHeight: '1.6', maxWidth: '500px', marginLeft: 'auto', marginRight: 'auto' }}>
             Rent a fully charged power bank instantly. No app download required. Just scan, pay, and go.
           </p>
 
@@ -139,10 +162,10 @@ export default function HomePage() {
                 e.currentTarget.style.boxShadow = '0 10px 25px rgba(16, 185, 129, 0.4)';
               }}
             >
-              ⚡ Rent a Power Bank Now
+               Rent a Power Bank Now
             </Link>
             
-            <p style={{ fontSize: '14px', color: '#64748b', margin: '10px 0 0 0' }}>
+            <p style={{ fontSize: '14px', color: '#94a3b8', margin: '10px 0 0 0' }}>
               Starting at just <strong style={{ color: '#34d399' }}>₦100 / hour</strong>
             </p>
           </div>
@@ -162,7 +185,7 @@ export default function HomePage() {
           textAlign: 'center'
         }}>
           <div>
-            <div style={{ fontSize: '28px', marginBottom: '8px' }}>🔒</div>
+            <div style={{ fontSize: '28px', marginBottom: '8px' }}></div>
             <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 5px 0' }}>Paystack Secured</h3>
             <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>100% safe & encrypted payments</p>
           </div>
@@ -172,7 +195,7 @@ export default function HomePage() {
             <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>Works directly in your browser</p>
           </div>
           <div>
-            <div style={{ fontSize: '28px', marginBottom: '8px' }}></div>
+            <div style={{ fontSize: '28px', marginBottom: '8px' }}>⚡</div>
             <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 5px 0' }}>Instant Unlock</h3>
             <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>Get your power bank in seconds</p>
           </div>
