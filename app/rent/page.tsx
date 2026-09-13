@@ -1,447 +1,159 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import Script from 'next/script';
-
-interface Location {
-  id: string;
-  name: string;
-  address: string;
-  state: string;
-  city: string;
-  town: string;
-  subaccount_code: string | null;
-}
-
-const nigerianStates = [
-  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno',
-  'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'Gombe', 'Imo',
-  'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara', 'Lagos',
-  'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau', 'Rivers',
-  'Sokoto', 'Taraba', 'Yobe', 'Zamfara', 'FCT'
-];
-
-const stateLGAs: Record<string, string[]> = {
-  'Lagos': ['Ikeja', 'Surulere', 'Yaba', 'Ikorodu', 'Epe', 'Badagry', 'Mushin', 'Oshodi', 'Alimosho', 'Kosofe', 'Shomolu', 'Agege', 'Ajeromi-Ifelodun', 'Amuwo-Odofin', 'Apapa', 'Eti-Osa', 'Ifako-Ijaiye', 'Lagos Island', 'Lagos Mainland', 'Ojo'],
-  'Ondo': ['Akoko North-East', 'Akoko North-West', 'Akoko South-East', 'Akoko South-West', 'Akure North', 'Akure South', 'Ese Odo', 'Idanre', 'Ifedore', 'Ilaje', 'Ile Oluji/Okeigbo', 'Irele', 'Odigbo', 'Okitipupa', 'Ondo East', 'Ondo West', 'Ose', 'Owo'],
-  'FCT': ['Abuja Municipal', 'Gwagwalada', 'Kuje', 'Bwari', 'Abaji', 'Kwali'],
-  'Rivers': ['Port Harcourt', 'Obio-Akpor', 'Okrika', 'Ogu-Bolo', 'Eleme', 'Tai', 'Gokana', 'Khana', 'Asari-Toru', 'Akuku-Toru'],
-  'Kano': ['Kano Municipal', 'Fagge', 'Dala', 'Gwale', 'Tarauni', 'Nassarawa', 'Kumbotso', 'Ungogo', 'Kura', 'Madobi'],
-  'Oyo': ['Ibadan North', 'Ibadan South-West', 'Ibadan South-East', 'Ibadan North-East', 'Ibadan North-West', 'Egbeda', 'Akinyele', 'Oluyole', 'Ona-Ara', 'Lagelu'],
-  'Delta': ['Warri', 'Uvwie', 'Udu', 'Okpe', 'Sapele', 'Ethiope East', 'Ethiope West', 'Ughelli North', 'Ughelli South', 'Bomadi'],
-  'Edo': ['Benin City', 'Oredo', 'Egor', 'Uhunmwonde', 'Ovia North-East', 'Ovia South-West', 'Esan North-East', 'Esan South-East', 'Esan Central', 'Esan West'],
-  'Ogun': ['Abeokuta North', 'Abeokuta South', 'Ado-Odo/Ota', 'Ewekoro', 'Ifo', 'Ijebu East', 'Ijebu North', 'Ijebu North-East', 'Ijebu Ode', 'Remo North'],
-  'Osun': ['Osogbo', 'Ede North', 'Ede South', 'Atakumosa East', 'Atakumosa West', 'Ife Central', 'Ife East', 'Ife North', 'Ife South', 'Egbedore'],
-  'Kaduna': ['Kaduna North', 'Kaduna South', 'Igabi', 'Kaura', 'Sanga', 'Jema\'a', 'Anchau', 'Kachia', 'Kagarko', 'Kajuru'],
-  'Katsina': ['Katsina', 'Daura', 'Funtua', 'Malumfashi', 'Mashi', 'Bindawa', 'Charanchi', 'Dandume', 'Danja', 'Dan Musa'],
-  'Sokoto': ['Sokoto North', 'Sokoto South', 'Tambuwal', 'Tangaza', 'Gudu', 'Wurno', 'Illela', 'Binji', 'Kebbe', 'Shagari'],
-  'Kwara': ['Ilorin East', 'Ilorin South', 'Ilorin West', 'Asa', 'Baruten', 'Edu', 'Ekiti', 'Ifelodun', 'Irepodun', 'Isin'],
-  'Enugu': ['Enugu East', 'Enugu North', 'Enugu South', 'Awgu', 'Aninri', 'Nkanu East', 'Nkanu West', 'Udi', 'Oji River', 'Ezeagu'],
-  'Anambra': ['Awka North', 'Awka South', 'Onitsha North', 'Onitsha South', 'Nnewi North', 'Nnewi South', 'Ekwusigo', 'Idemili North', 'Idemili South', 'Ogbaru'],
-  'Imo': ['Owerri Municipal', 'Owerri North', 'Owerri West', 'Aboh Mbaise', 'Ahiazu Mbaise', 'Ehime Mbano', 'Ezinihitte', 'Ideato North', 'Ideato South', 'Ihitte/Uboma'],
-  'Abia': ['Aba North', 'Aba South', 'Arochukwu', 'Bende', 'Ikwuano', 'Isiala Ngwa North', 'Isiala Ngwa South', 'Isuikwuato', 'Obi Ngwa', 'Ohafia'],
-  'Ebonyi': ['Abakaliki', 'Afikpo North', 'Afikpo South', 'Ebonyi', 'Ezza North', 'Ezza South', 'Ikwo', 'Ishielu', 'Ivo', 'Izzi'],
-  'Benue': ['Makurdi', 'Guma', 'Gwer East', 'Gwer West', 'Katsina-Ala', 'Konshisha', 'Kwande', 'Logo', 'Mbamtor', 'Ogbadibo'],
-  'Nasarawa': ['Lafia', 'Akwanga', 'Awe', 'Doma', 'Karu', 'Keana', 'Keffi', 'Kokona', 'Nasarawa', 'Nasarawa Egon'],
-  'Niger': ['Minna', 'Bida', 'Kontagora', 'Suleja', 'Bosso', 'Chanchaga', 'Mokwa', 'Agaie', 'Baro', 'Edati'],
-  'Plateau': ['Jos North', 'Jos South', 'Jos East', 'Bokkos', 'Barkin Ladi', 'Bassa', 'Kanam', 'Kanke', 'Langtang North', 'Langtang South'],
-  'Adamawa': ['Yola North', 'Yola South', 'Girei', 'Demsa', 'Fufore', 'Ganaye', 'Gombi', 'Guyuk', 'Hong', 'Jada'],
-  'Taraba': ['Jalingo', 'Ardo Kola', 'Bali', 'Donga', 'Gashaka', 'Gassol', 'Ibi', 'Karim Lamido', 'Lau', 'Sardauna'],
-  'Bauchi': ['Bauchi', 'Alkaleri', 'Bogoro', 'Damban', 'Darazo', 'Dass', 'Ganjuwa', 'Giade', 'Itas/Gadau'],
-  'Borno': ['Maiduguri', 'Askira/Uba', 'Bama', 'Bayo', 'Biu', 'Chibok', 'Damboa', 'Dikwa', 'Gubio', 'Guzamala'],
-  'Yobe': ['Damaturu', 'Bade', 'Bursari', 'Fika', 'Fune', 'Geidam', 'Gujba', 'Gulani', 'Jakusko', 'Karasuwa'],
-  'Gombe': ['Gombe', 'Akko', 'Balanga', 'Billiri', 'Dukku', 'Kaltungo', 'Kwami', 'Nafada', 'Shongom', 'Yamaltu/Deba'],
-  'Jigawa': ['Dutse', 'Auyo', 'Babura', 'Biriniwa', 'Birnin Kudu', 'Buji', 'Gagarawa', 'Garki', 'Gumel', 'Guri'],
-  'Kebbi': ['Birnin Kebbi', 'Aleiro', 'Arewa Dandi', 'Argungu', 'Augie', 'Bagudo', 'Dandi', 'Fakai', 'Gwandu', 'Jega'],
-  'Zamfara': ['Gusau', 'Anka', 'Bakura', 'Birnin Magaji/Kiyaw', 'Bukkuyum', 'Bungudu', 'Gummi', 'Kaura Namoda', 'Maradun'],
-  'Bayelsa': ['Yenagoa', 'Brass', 'Ekeremor', 'Kolokuma/Opokuma', 'Nembe', 'Ogbia', 'Sagbama', 'Southern Ijaw'],
-  'Cross River': ['Calabar Municipal', 'Calabar South', 'Akamkpa', 'Akpabuyo', 'Bakassi', 'Biase', 'Boki', 'Etung', 'Ikom', 'Obanliku'],
-  'Akwa Ibom': ['Uyo', 'Abak', 'Eastern Obolo', 'Eket', 'Esit Eket', 'Essien Udim', 'Etim Ekpo', 'Etinan', 'Ibeno', 'Ibesikpo Asutan']
-};
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function RentPage() {
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [filteredLocations, setFilteredLocations] = useState<Location[]>([]);
-  const [selectedLocation, setSelectedLocation] = useState('');
+  const router = useRouter();
   const [duration, setDuration] = useState('1');
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
+  const [formData, setFormData] = useState({ name: '', phone: '', email: '' });
+  const [agreeTerms, setAgreeTerms] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [ticket, setTicket] = useState('');
-  const [error, setError] = useState('');
-  const [paystackLoaded, setPaystackLoaded] = useState(false);
-  
-  const [searchState, setSearchState] = useState('');
-  const [searchLGA, setSearchLGA] = useState('');
-  const [searchTown, setSearchTown] = useState('');
-  const [availableLGAs, setAvailableLGAs] = useState<string[]>([]);
 
-  const pricing: Record<string, number> = {
+  const prices: Record<string, number> = {
     '1': 100,
     '3': 200,
     '5': 300,
-    '24': 800,
+    '24': 800
   };
 
-  useEffect(() => { 
-    fetchLocations(); 
-    
-    // Check if a location ID is in the URL (from QR code)
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const locId = params.get('location');
-      if (locId) {
-        setSelectedLocation(locId);
-      }
-    }
-  }, []);
+  const currentPrice = prices[duration] || 100;
 
-  useEffect(() => {
-    if (searchState && stateLGAs[searchState]) {
-      setAvailableLGAs(stateLGAs[searchState]);
-      setSearchLGA('');
-    } else {
-      setAvailableLGAs([]);
-      setSearchLGA('');
-    }
-  }, [searchState]);
-
-  useEffect(() => {
-    filterLocations();
-  }, [searchState, searchLGA, searchTown, locations]);
-
-  const fetchLocations = async () => {
-    const { data } = await supabase
-      .from('locations')
-      .select(`id, name, address, state, city, town, location_owners (paystack_subaccount_code)`)
-      .eq('status', 'active')
-      .eq('is_visible_on_map', true);
-    
-    if (data) {
-      const formattedData = data.map((loc: any) => ({
-        id: loc.id,
-        name: loc.name,
-        address: loc.address,
-        state: loc.state || '',
-        city: loc.city || '',
-        town: loc.town || '',
-        subaccount_code: loc.location_owners?.paystack_subaccount_code || null
-      }));
-      setLocations(formattedData);
-      setFilteredLocations(formattedData);
-    }
-  };
-
-  const filterLocations = () => {
-    let filtered = locations;
-    
-    if (searchState.trim()) {
-      filtered = filtered.filter(loc => 
-        loc.state.toLowerCase().includes(searchState.toLowerCase())
-      );
-    }
-    
-    if (searchLGA.trim()) {
-      filtered = filtered.filter(loc => 
-        loc.city.toLowerCase().includes(searchLGA.toLowerCase()) ||
-        loc.address.toLowerCase().includes(searchLGA.toLowerCase())
-      );
-    }
-    
-    if (searchTown.trim()) {
-      filtered = filtered.filter(loc => 
-        loc.town.toLowerCase().includes(searchTown.toLowerCase()) ||
-        loc.address.toLowerCase().includes(searchTown.toLowerCase())
-      );
-    }
-    
-    setFilteredLocations(filtered);
-    if (!selectedLocation || !filtered.find(loc => loc.id === selectedLocation)) {
-      setSelectedLocation('');
-    }
-  };
-
-  const clearSearch = () => {
-    setSearchState('');
-    setSearchLGA('');
-    setSearchTown('');
-    setFilteredLocations(locations);
-    setSelectedLocation('');
-  };
-
-  const generateTicketCode = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = 'RNT-';
-    for (let i = 0; i < 6; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-  };
-
-  const handlePayment = (e: any) => {
+  const handleCheckout = (e: any) => {
     e.preventDefault();
-    
-    if (!selectedLocation) { 
-      setError('Please select a location'); 
-      return; 
-    }
-    if (!customerName || !customerPhone) { 
-      setError('Please fill in all fields'); 
-      return; 
-    }
-
-    if (!paystackLoaded) {
-      setError('Payment system is still loading. Please wait...');
+    if (!agreeTerms) {
+      alert('Please agree to the Terms & Conditions to continue.');
       return;
     }
-
     setLoading(true);
-    setError('');
-
-    const amount = pricing[duration] * 100;
-    const ticketCode = generateTicketCode();
-    const email = `${customerPhone.replace(/\s/g, '')}@okcharge.ng`;
-    const selectedLoc = locations.find(loc => loc.id === selectedLocation);
-    const subaccount = selectedLoc?.subaccount_code || undefined;
-
-    try {
-      const handler = (window as any).PaystackPop.setup({
-        key: 'pk_live_9dd06423b57f6a6f6927e3ea2e28a101baa01fba',
-        email: email,
-        amount: amount,
-        ref: ticketCode,
-        subaccount: subaccount,
-        callback: function(response: any) {
-          console.log('Payment successful:', response);
-          saveRental(ticketCode, response.reference);
-        },
-        onClose: function() {
-          setError('Payment window closed');
-          setLoading(false);
-        }
-      });
-
-      handler.openIframe();
-    } catch (err: any) {
-      console.error('Paystack error:', err);
-      setError('Payment system error. Please try again.');
+    // TODO: Integrate Paystack here
+    setTimeout(() => {
       setLoading(false);
-    }
+      alert('Redirecting to Paystack...');
+    }, 1000);
   };
-
-  const saveRental = async (ticketCode: string, reference: string) => {
-    try {
-      const { error } = await supabase.from('rentals').insert([{
-        ticket_code: ticketCode, 
-        location_id: selectedLocation, 
-        customer_name: customerName,
-        customer_phone: customerPhone, 
-        duration_hours: parseInt(duration), 
-        amount_paid: pricing[duration],
-        status: 'paid', 
-        paystack_reference: reference, 
-        created_at: new Date().toISOString()
-      }]);
-
-      if (error) { 
-        setError('Payment successful but failed to save. Ticket: ' + ticketCode); 
-      } else { 
-        setTicket(ticketCode); 
-      }
-    } catch (err: any) { 
-      setError('Error saving rental: ' + err); 
-    }
-    setLoading(false);
-  };
-
-  const inputStyle: React.CSSProperties = { width: '100%', padding: '12px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' };
-  const selectStyle: React.CSSProperties = { width: '100%', padding: '15px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' };
 
   return (
-    <>
-      <Script 
-        src="https://js.paystack.co/v1/inline.js" 
-        strategy="afterInteractive" 
-        onLoad={() => {
-          console.log('Paystack loaded successfully');
-          setPaystackLoaded(true);
-        }} 
-        onError={() => {
-          console.error('Failed to load Paystack');
-          setError('Payment system unavailable');
-        }} 
-      />
-      
-      <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '600px', margin: '0 auto' }}>
-        {ticket ? (
-          <div style={{ textAlign: 'center', padding: '20px' }}>
-            <div style={{ fontSize: '64px', marginBottom: '20px' }}>✅</div>
-            <h1 style={{ fontSize: '24px', marginBottom: '10px', color: '#0f172a' }}>Payment Successful!</h1>
-            <p style={{ color: '#64748b', marginBottom: '30px' }}>Your rental ticket is ready</p>
-            <div style={{ backgroundColor: '#f8fafc', padding: '30px', borderRadius: '12px', border: '2px dashed #2563eb', marginBottom: '20px' }}>
-              <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '10px' }}>YOUR TICKET CODE</p>
-              <h2 style={{ fontSize: '32px', color: '#2563eb', margin: '0', fontFamily: 'monospace', letterSpacing: '2px' }}>{ticket}</h2>
-            </div>
-            <div style={{ backgroundColor: '#fff3cd', padding: '15px', borderRadius: '8px', marginBottom: '20px', textAlign: 'left' }}>
-              <h3 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>What's Next?</h3>
-              <ol style={{ margin: 0, paddingLeft: '20px', fontSize: '14px' }}>
-                <li>Show this ticket code to the location staff</li>
-                <li>Staff will scan a power bank and enter your ticket</li>
-                <li>Collect the power bank and enjoy!</li>
-                <li>Return before {duration} hours to avoid extra charges</li>
-              </ol>
-            </div>
-            <button onClick={() => window.print()} style={{ width: '100%', padding: '15px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', marginBottom: '10px', cursor: 'pointer' }}> Print / Save Ticket</button>
-            <a href="/" style={{ display: 'block', textAlign: 'center', color: '#2563eb', textDecoration: 'none', marginTop: '10px' }}>← Back to Home</a>
-          </div>
-        ) : (
-          <>
-            <h1 style={{ fontSize: '24px', marginBottom: '10px' }}>Rent a Power Bank</h1>
-            <p style={{ color: '#64748b', marginBottom: '30px' }}>Find a station and pay securely</p>
-            
-            {error && (
-              <div style={{ 
-                padding: '15px', 
-                backgroundColor: error.includes('successful') ? '#dcfce7' : '#fee2e2', 
-                color: error.includes('successful') ? '#15803d' : '#b91c1c', 
-                borderRadius: '8px', 
-                marginBottom: '20px',
-                border: `1px solid ${error.includes('successful') ? '#86efac' : '#fca5a5'}`
-              }}>
-                {error}
-              </div>
-            )}
-            
-            {!paystackLoaded && !error && (
-              <div style={{ 
-                padding: '15px', 
-                backgroundColor: '#fef3c7', 
-                color: '#92400e', 
-                borderRadius: '8px', 
-                marginBottom: '20px', 
-                textAlign: 'center',
-                border: '1px solid #fde68a'
-              }}>
-                Loading payment system...
-              </div>
-            )}
-            
-            <form onSubmit={handlePayment}>
-              <div style={{ backgroundColor: '#f0f9ff', padding: '20px', borderRadius: '12px', border: '1px solid #bae6fd', marginBottom: '20px' }}>
-                <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#0369a1' }}> Find a Station</h3>
-                
-                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', fontSize: '14px' }}>State *</label>
-                <select 
-                  style={inputStyle}
-                  value={searchState}
-                  onChange={(e) => setSearchState(e.target.value)}
-                >
-                  <option value="">Select State</option>
-                  {nigerianStates.map(state => (
-                    <option key={state} value={state}>{state}</option>
-                  ))}
-                </select>
+    <main style={{ 
+      fontFamily: 'sans-serif', 
+      backgroundColor: '#f8fafc', 
+      minHeight: '100vh', 
+      paddingBottom: '100px' // Space for sticky button
+    }}>
+      {/* Header */}
+      <div style={{ backgroundColor: '#0f172a', color: 'white', padding: '20px', textAlign: 'center' }}>
+        <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>Complete Your Rental</h1>
+        <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#94a3b8' }}>Station: Akure Main Branch</p>
+      </div>
 
-                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', fontSize: '14px' }}>Local Government (LGA) *</label>
-                <select 
-                  style={inputStyle}
-                  value={searchLGA}
-                  onChange={(e) => setSearchLGA(e.target.value)}
-                  disabled={!searchState}
-                >
-                  <option value="">Select LGA</option>
-                  {availableLGAs.map(lga => (
-                    <option key={lga} value={lga}>{lga}</option>
-                  ))}
-                </select>
-
-                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', fontSize: '14px' }}>Town/Area</label>
-                <input 
-                  style={inputStyle} 
-                  type="text" 
-                  placeholder="e.g., Allen Avenue, Computer Village" 
-                  value={searchTown}
-                  onChange={(e) => setSearchTown(e.target.value)}
-                />
-
-                {(searchState || searchLGA || searchTown) && (
-                  <button 
-                    type="button"
-                    onClick={clearSearch}
-                    style={{ 
-                      width: '100%', 
-                      padding: '10px', 
-                      backgroundColor: '#f87171', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '6px', 
-                      fontSize: '14px', 
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      marginBottom: '10px'
-                    }}
-                  >
-                    Clear Search
-                  </button>
-                )}
-
-                <div style={{ fontSize: '13px', color: '#64748b', marginTop: '10px' }}>
-                  Found {filteredLocations.length} station{filteredLocations.length !== 1 ? 's' : ''}
-                </div>
-              </div>
-
-              <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Select Location *</label>
-              <select style={selectStyle} value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} required>
-                <option value="">-- Choose a location --</option>
-                {filteredLocations.map((loc) => (
-                  <option key={loc.id} value={loc.id}>
-                    {loc.name} - {loc.address} {loc.city && `(${loc.city})`}
-                  </option>
-                ))}
-              </select>
-
-              <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Rental Duration *</label>
-              <select style={selectStyle} value={duration} onChange={(e) => setDuration(e.target.value)}>
-                <option value="1">1 hour - ₦100</option>
-                <option value="3">3 hours - ₦200</option>
-                <option value="5">5 hours - 300</option>
-                <option value="24">24 hours - ₦800</option>
-              </select>
-
-              <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Your Name *</label>
-              <input style={selectStyle} type="text" placeholder="e.g., John Doe" value={customerName} onChange={(e) => setCustomerName(e.target.value)} required />
-
-              <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Phone Number *</label>
-              <input style={selectStyle} type="tel" placeholder="e.g., 08012345678" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} required />
-
-              <div style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', marginBottom: '20px', textAlign: 'center' }}>
-                <p style={{ margin: '0', fontSize: '14px', color: '#64748b' }}>Total Amount</p>
-                <h2 style={{ margin: '5px 0 0 0', fontSize: '28px', color: '#0f172a' }}>₦{pricing[duration].toLocaleString()}</h2>
-              </div>
-
-              <button 
-                type="submit" 
-                disabled={loading || !paystackLoaded} 
-                style={{ 
-                  width: '100%', 
-                  padding: '18px', 
-                  backgroundColor: loading || !paystackLoaded ? '#999' : '#10b981', 
-                  color: 'white', 
-                  border: 'none', 
-                  borderRadius: '8px', 
-                  fontSize: '18px', 
-                  fontWeight: 'bold', 
-                  cursor: loading || !paystackLoaded ? 'not-allowed' : 'pointer' 
+      <div style={{ maxWidth: '500px', margin: '0 auto', padding: '20px' }}>
+        
+        {/* Step 1: Duration */}
+        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', marginTop: 0, marginBottom: '15px' }}>1. Choose Duration</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            {Object.entries(prices).map(([time, price]) => (
+              <button
+                key={time}
+                onClick={() => setDuration(time)}
+                style={{
+                  padding: '15px',
+                  borderRadius: '8px',
+                  border: duration === time ? '2px solid #10b981' : '1px solid #e2e8f0',
+                  backgroundColor: duration === time ? '#ecfdf5' : 'white',
+                  cursor: 'pointer',
+                  textAlign: 'center'
                 }}
               >
-                {loading ? 'Processing...' : !paystackLoaded ? 'Loading Payment...' : 'Pay Now with Paystack'}
+                <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '16px' }}>{time} Hour{time !== '1' ? 's' : ''}</div>
+                <div style={{ color: '#10b981', fontWeight: 'bold', marginTop: '5px' }}>₦{price}</div>
               </button>
-            </form>
-            <div style={{ marginTop: '30px', textAlign: 'center' }}><a href="/" style={{ color: '#2563eb', textDecoration: 'none' }}>← Back to Home</a></div>
-          </>
-        )}
-      </main>
-    </>
+            ))}
+          </div>
+        </div>
+
+        {/* Step 2: Customer Data */}
+        <form onSubmit={handleCheckout} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', marginTop: 0, marginBottom: '15px' }}>2. Your Details</h2>
+          
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', fontSize: '14px', color: '#475569' }}>Full Name *</label>
+          <input
+            type="text"
+            required
+            placeholder="John Doe"
+            value={formData.name}
+            onChange={(e) => setFormData({...formData, name: e.target.value})}
+            style={{ width: '100%', padding: '12px', marginBottom: '15px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+          />
+
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', fontSize: '14px', color: '#475569' }}>Phone Number (WhatsApp) *</label>
+          <input
+            type="tel"
+            required
+            placeholder="08012345678"
+            value={formData.phone}
+            onChange={(e) => setFormData({...formData, phone: e.target.value})}
+            style={{ width: '100%', padding: '12px', marginBottom: '15px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+          />
+
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', fontSize: '14px', color: '#475569' }}>Email Address (Optional)</label>
+          <input
+            type="email"
+            placeholder="you@example.com"
+            value={formData.email}
+            onChange={(e) => setFormData({...formData, email: e.target.value})}
+            style={{ width: '100%', padding: '12px', marginBottom: '20px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+          />
+
+          {/* Terms Checkbox */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '20px' }}>
+            <input
+              type="checkbox"
+              id="terms"
+              checked={agreeTerms}
+              onChange={(e) => setAgreeTerms(e.target.checked)}
+              style={{ marginTop: '4px', transform: 'scale(1.2)' }}
+              required
+            />
+            <label htmlFor="terms" style={{ fontSize: '13px', color: '#64748b', lineHeight: '1.4' }}>
+              I agree to the <a href="/terms" target="_blank" style={{ color: '#2563eb', textDecoration: 'none' }}>Terms & Conditions</a>, including the ₦15,000 replacement fee for unreturned power banks.
+            </label>
+          </div>
+        </form>
+      </div>
+
+      {/* Sticky Pay Button */}
+      <div style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: 'white',
+        padding: '15px 20px',
+        boxShadow: '0 -2px 10px rgba(0,0,0,0.1)',
+        display: 'flex',
+        justifyContent: 'center'
+      }}>
+        <button
+          onClick={handleCheckout}
+          disabled={loading}
+          style={{
+            width: '100%',
+            maxWidth: '500px',
+            padding: '16px',
+            backgroundColor: loading ? '#94a3b8' : '#10b981',
+            color: 'white',
+            border: 'none',
+            borderRadius: '12px',
+            fontSize: '18px',
+            fontWeight: 'bold',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            boxShadow: '0 4px 6px rgba(16, 185, 129, 0.3)'
+          }}
+        >
+          {loading ? 'Processing...' : `Pay ₦${currentPrice} & Rent`}
+        </button>
+      </div>
+    </main>
   );
 }
