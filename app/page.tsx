@@ -8,7 +8,6 @@ export default function HomePage() {
   const [availableCount, setAvailableCount] = useState<number | null>(null);
 
   useEffect(() => {
-    // Fetch real-time available power banks count
     const fetchAvailability = async () => {
       const { count } = await supabase
         .from('power_banks')
@@ -23,11 +22,61 @@ export default function HomePage() {
   return (
     <main style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
       
+      {/* Navigation Bar */}
+      <nav style={{ 
+        backgroundColor: 'white', 
+        padding: '15px 20px', 
+        boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 1000
+      }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Link href="/" style={{ textDecoration: 'none' }}>
+            <img src="/logo.png" alt="OKcharge" style={{ height: '50px', width: 'auto' }} />
+          </Link>
+          <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+            <Link 
+              href="/auth/login" 
+              style={{ 
+                padding: '10px 20px', 
+                backgroundColor: 'transparent', 
+                color: '#0f172a', 
+                borderRadius: '8px', 
+                textDecoration: 'none', 
+                fontWeight: '600',
+                border: '2px solid #e2e8f0',
+                fontSize: '14px'
+              }}
+            >
+              Partner Login
+            </Link>
+            <Link 
+              href="/rent" 
+              style={{ 
+                padding: '10px 20px', 
+                backgroundColor: '#10b981', 
+                color: 'white', 
+                borderRadius: '8px', 
+                textDecoration: 'none', 
+                fontWeight: '600',
+                fontSize: '14px'
+              }}
+            >
+              Rent Now
+            </Link>
+          </div>
+        </div>
+      </nav>
+
       {/* Hero Section */}
       <div style={{ 
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', 
+        background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.9) 100%), url("/hero-bg.jpg")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
         color: 'white', 
-        padding: '60px 20px 80px', 
+        padding: '80px 20px 100px', 
         textAlign: 'center',
         borderBottomLeftRadius: '40px',
         borderBottomRightRadius: '40px',
@@ -102,7 +151,7 @@ export default function HomePage() {
             </Link>
             
             <p style={{ fontSize: '14px', color: '#64748b', margin: '10px 0 0 0' }}>
-              Starting at just <strong style={{ color: '#34d399' }}>₦100 / hour</strong>
+              Starting at just <strong style={{ color: '#34d399' }}>100 / hour</strong>
             </p>
           </div>
         </div>
@@ -131,7 +180,7 @@ export default function HomePage() {
             <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>Works directly in your browser</p>
           </div>
           <div>
-            <div style={{ fontSize: '28px', marginBottom: '8px' }}>⚡</div>
+            <div style={{ fontSize: '28px', marginBottom: '8px' }}></div>
             <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 5px 0' }}>Instant Unlock</h3>
             <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>Get your power bank in seconds</p>
           </div>
@@ -145,7 +194,7 @@ export default function HomePage() {
         <div style={{ display: 'grid', gap: '25px' }}>
           {[
             { step: '1', icon: '📷', title: 'Scan the QR Code', desc: 'Find an OKcharge station and scan the location QR code with your phone camera.' },
-            { step: '2', icon: '💳', title: 'Pay Securely', desc: 'Choose your rental duration and pay safely via Paystack. No hidden fees.' },
+            { step: '2', icon: '', title: 'Pay Securely', desc: 'Choose your rental duration and pay safely via Paystack. No hidden fees.' },
             { step: '3', icon: '🔋', title: 'Collect & Go', desc: 'Show your rental ticket to the staff, collect your fully charged power bank, and go!' },
             { step: '4', icon: '🔄', title: 'Return Easily', desc: 'Bring it back to any OKcharge partner location before your time runs out.' }
           ].map((item, index) => (
@@ -197,12 +246,18 @@ export default function HomePage() {
             borderRadius: '10px', 
             textDecoration: 'none', 
             fontWeight: '700',
-            fontSize: '16px'
+            fontSize: '16px',
+            marginBottom: '20px'
           }}
         >
           Start Your Rental
         </Link>
-        <p style={{ fontSize: '13px', color: '#64748b', marginTop: '30px', margin: '30px 0 0 0' }}>
+        <div style={{ marginTop: '30px' }}>
+          <Link href="/auth/login" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', margin: '0 10px' }}>Partner Login</Link>
+          <Link href="/auth/admin-login" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', margin: '0 10px' }}>Admin Login</Link>
+          <Link href="/auth/staff-login" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', margin: '0 10px' }}>Staff Login</Link>
+        </div>
+        <p style={{ fontSize: '13px', color: '#64748b', marginTop: '20px', margin: '30px 0 0 0' }}>
           © {new Date().getFullYear()} OKcharge. All rights reserved.
         </p>
       </div>
