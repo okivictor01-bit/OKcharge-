@@ -20,12 +20,19 @@ export default function TermsPage() {
         You must be at least 18 years old and possess a valid means of identification and payment to rent a power bank from OKcharge.
       </p>
 
-      <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#0f172a', marginTop: '20px', marginBottom: '10px' }}>2.2 Rental Period</h3>
+      <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#0f172a', marginTop: '20px', marginBottom: '10px' }}>2.2 Security & Data Collection</h3>
       <p style={{ marginBottom: '20px' }}>
-        Your rental period begins the moment the power bank is unlocked and handed over to you. You will be charged based on the duration selected at checkout.
+        To ensure the security of our equipment and prevent theft, our location partners and staff are authorized to collect specific information at the time of rental. By renting a power bank, you consent to the collection of:
+      </p>
+      <ul style={{ marginBottom: '20px', paddingLeft: '20px' }}>
+        <li style={{ marginBottom: '10px' }}><strong>A Photograph:</strong> A clear picture of the customer taking the rental.</li>
+        <li style={{ marginBottom: '10px' }}><strong>Phone Number:</strong> A valid, active mobile number for rental tracking and communication.</li>
+        <li style={{ marginBottom: '10px' }}><strong>IMEI Number:</strong> The International Mobile Equipment Identity (IMEI) number of the mobile phone being used to facilitate the rental or receive communications.</li>
+      </ul>
+      <p style={{ marginBottom: '20px', fontSize: '14px', color: '#64748b' }}>
+        <em>This data is collected strictly for security, rental tracking, and recovery purposes in accordance with our Privacy Policy.</em>
       </p>
 
-      {/* NEW RETURN POLICY SECTION */}
       <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#0f172a', marginTop: '20px', marginBottom: '10px' }}>2.3 Return Policy</h3>
       <div style={{ 
         backgroundColor: '#fef2f2', 
@@ -35,24 +42,24 @@ export default function TermsPage() {
         marginBottom: '20px',
         color: '#991b1b'
       }}>
-        <strong>Important:</strong> Power banks must be returned to the designated location. Failure to return the power bank within 7 days will be considered theft, and you will be charged the full replacement cost (₦15,000), the total cost of tracking and police charges.
+        <strong>Important:</strong> Power banks must be returned to the designated location. Failure to return the power bank within 7 days will be considered theft, and you will be charged the full replacement cost (₦15,000), the total cost of tracking, and applicable police charges.
       </div>
 
       <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#0f172a', marginTop: '30px', marginBottom: '15px' }}>3. Payments & Fees</h2>
       <p style={{ marginBottom: '20px' }}>
-        All rental fees are charged upfront via our secure payment gateway (Paystack). If you exceed your rental time, additional charges will apply based on our standard hourly rates.
+        All rental fees are charged upfront via our secure payment gateway (Paystack). If you exceed your rental time, additional charges will apply based on our standard hourly rates. Any penalties for late return or loss will be charged to the payment method on file.
       </p>
 
       <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#0f172a', marginTop: '30px', marginBottom: '15px' }}>4. User Responsibilities</h2>
       <ul style={{ marginBottom: '20px', paddingLeft: '20px' }}>
-        <li style={{ marginBottom: '10px' }}>You are responsible for the power bank from the time it is rented until it is successfully returned and confirmed by our staff.</li>
-        <li style={{ marginBottom: '10px' }}>Do not attempt to open, modify, or damage the power bank or its cables.</li>
-        <li style={{ marginBottom: '10px' }}>Report any issues or malfunctions to our staff immediately.</li>
+        <li style={{ marginBottom: '10px' }}>You are fully responsible for the power bank from the time it is rented until it is successfully returned and confirmed by our staff.</li>
+        <li style={{ marginBottom: '10px' }}>Do not attempt to open, modify, or damage the power bank or its cables. You will be held liable for any damages.</li>
+        <li style={{ marginBottom: '10px' }}>Report any issues, malfunctions, or lost items to our staff or customer support immediately.</li>
       </ul>
 
       <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#0f172a', marginTop: '30px', marginBottom: '15px' }}>5. Limitation of Liability</h2>
       <p style={{ marginBottom: '20px' }}>
-        OKcharge is not responsible for any damage to your device caused by using our power banks. We provide the equipment in good working condition, but we do not guarantee compatibility with all devices.
+        OKcharge is not responsible for any damage to your personal electronic devices caused by using our power banks. We provide the equipment in good working condition, but we do not guarantee compatibility with all devices.
       </p>
 
       <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#0f172a', marginTop: '30px', marginBottom: '15px' }}>6. Governing Law</h2>
