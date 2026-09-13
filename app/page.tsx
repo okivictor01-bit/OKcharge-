@@ -32,20 +32,20 @@ export default function HomePage() {
         zIndex: 1000
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Link href="/" style={{ textDecoration: 'none' }}>
-            <img src="/logo.png" alt="OKcharge" style={{ height: '50px', width: 'auto' }} />
+          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+            <img src="/logo.png" alt="OKcharge" style={{ height: '40px', width: 'auto' }} />
           </Link>
-          <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <Link 
               href="/auth/login" 
               style={{ 
-                padding: '10px 20px', 
+                padding: '10px 18px', 
                 backgroundColor: 'transparent', 
                 color: '#0f172a', 
                 borderRadius: '8px', 
                 textDecoration: 'none', 
                 fontWeight: '600',
-                border: '2px solid #e2e8f0',
+                border: '1px solid #e2e8f0',
                 fontSize: '14px'
               }}
             >
@@ -54,7 +54,7 @@ export default function HomePage() {
             <Link 
               href="/rent" 
               style={{ 
-                padding: '10px 20px', 
+                padding: '10px 18px', 
                 backgroundColor: '#10b981', 
                 color: 'white', 
                 borderRadius: '8px', 
@@ -69,9 +69,9 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {/* Hero Section with Background Image */}
       <div style={{ 
-        background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.9) 100%), url("/hero-bg.jpg")',
+        background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%), url("/hero-bg.jpg")',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
@@ -83,14 +83,6 @@ export default function HomePage() {
         position: 'relative',
         overflow: 'hidden'
       }}>
-        {/* Decorative background element */}
-        <div style={{ 
-          position: 'absolute', top: '-50px', right: '-50px', 
-          width: '200px', height: '200px', 
-          backgroundColor: 'rgba(16, 185, 129, 0.1)', 
-          borderRadius: '50%' 
-        }} />
-
         <div style={{ maxWidth: '600px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
           <div style={{ 
             display: 'inline-flex', 
@@ -102,7 +94,7 @@ export default function HomePage() {
             borderRadius: '50px', 
             fontSize: '14px', 
             fontWeight: '600',
-            marginBottom: '20px',
+            marginBottom: '25px',
             border: '1px solid rgba(16, 185, 129, 0.3)'
           }}>
             <span style={{ 
@@ -151,7 +143,7 @@ export default function HomePage() {
             </Link>
             
             <p style={{ fontSize: '14px', color: '#64748b', margin: '10px 0 0 0' }}>
-              Starting at just <strong style={{ color: '#34d399' }}>100 / hour</strong>
+              Starting at just <strong style={{ color: '#34d399' }}>₦100 / hour</strong>
             </p>
           </div>
         </div>
@@ -194,7 +186,7 @@ export default function HomePage() {
         <div style={{ display: 'grid', gap: '25px' }}>
           {[
             { step: '1', icon: '📷', title: 'Scan the QR Code', desc: 'Find an OKcharge station and scan the location QR code with your phone camera.' },
-            { step: '2', icon: '', title: 'Pay Securely', desc: 'Choose your rental duration and pay safely via Paystack. No hidden fees.' },
+            { step: '2', icon: '💳', title: 'Pay Securely', desc: 'Choose your rental duration and pay safely via Paystack. No hidden fees.' },
             { step: '3', icon: '🔋', title: 'Collect & Go', desc: 'Show your rental ticket to the staff, collect your fully charged power bank, and go!' },
             { step: '4', icon: '🔄', title: 'Return Easily', desc: 'Bring it back to any OKcharge partner location before your time runs out.' }
           ].map((item, index) => (
@@ -234,8 +226,8 @@ export default function HomePage() {
       </div>
 
       {/* Footer CTA */}
-      <div style={{ backgroundColor: '#0f172a', color: 'white', padding: '40px 20px', textAlign: 'center' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 15px 0' }}>Ready to stay charged?</h2>
+      <div style={{ backgroundColor: '#0f172a', color: 'white', padding: '50px 20px', textAlign: 'center' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 20px 0' }}>Ready to stay charged?</h2>
         <Link 
           href="/rent" 
           style={{ 
@@ -247,17 +239,19 @@ export default function HomePage() {
             textDecoration: 'none', 
             fontWeight: '700',
             fontSize: '16px',
-            marginBottom: '20px'
+            marginBottom: '30px'
           }}
         >
           Start Your Rental
         </Link>
-        <div style={{ marginTop: '30px' }}>
-          <Link href="/auth/login" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', margin: '0 10px' }}>Partner Login</Link>
-          <Link href="/auth/admin-login" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', margin: '0 10px' }}>Admin Login</Link>
-          <Link href="/auth/staff-login" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', margin: '0 10px' }}>Staff Login</Link>
+        
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap', marginBottom: '30px' }}>
+          <Link href="/auth/login" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Partner Login</Link>
+          <Link href="/auth/admin-login" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Admin Login</Link>
+          <Link href="/auth/staff-login" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px' }}>Staff Login</Link>
         </div>
-        <p style={{ fontSize: '13px', color: '#64748b', marginTop: '20px', margin: '30px 0 0 0' }}>
+
+        <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
           © {new Date().getFullYear()} OKcharge. All rights reserved.
         </p>
       </div>
