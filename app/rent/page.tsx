@@ -55,7 +55,7 @@ export default function RentPage() {
 
     // Initialize Paystack
     const handler = (window as any).PaystackPop?.setup({
-      key: 'pk_live_YOUR_PAYSTACK_PUBLIC_KEY', // REPLACE THIS WITH YOUR ACTUAL KEY
+      key: 'pk_live_9dd06423b57f6a6f6927e3ea2e28a101baa01fba',
       email: formData.email || formData.phone + '@okcharge.local',
       amount: currentPrice * 100, // Paystack uses kobo (multiply by 100)
       currency: 'NGN',
