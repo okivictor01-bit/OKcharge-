@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function RentPage() {
@@ -9,6 +9,7 @@ export default function RentPage() {
   const [formData, setFormData] = useState({ name: '', phone: '', email: '' });
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [paystackScriptLoaded, setPaystackScriptLoaded] = useState(false);
 
   const prices: Record<string, number> = {
     '1': 100,
@@ -19,18 +20,88 @@ export default function RentPage() {
 
   const currentPrice = prices[duration] || 100;
 
+  // Load Paystack script
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const script = document.createElement('script');
+      script.src = 'https://js.paystack.co/v1/inline.js';
+      script.async = true;
+      script.onload = () => setPaystackScriptLoaded(true);
+      document.body.appendChild(script);
+      
+      return () => {
+        document.body.removeChild(script);
+      };
+    }
+  }, []);
+
   const handleCheckout = (e: any) => {
     e.preventDefault();
+    
     if (!agreeTerms) {
       alert('Please agree to the Terms & Conditions to continue.');
       return;
     }
+
+    if (!formData.name || !formData.phone) {
+      alert('Please fill in all required fields.');
+      return;
+    }
+
     setLoading(true);
-    // TODO: Integrate Paystack here
-    setTimeout(() => {
+
+    // Generate a unique reference
+    const reference = `OKCHARGE_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+    // Initialize Paystack
+    const handler = (window as any).PaystackPop?.setup({
+      key: 'pk_live_YOUR_PAYSTACK_PUBLIC_KEY', // REPLACE THIS WITH YOUR ACTUAL KEY
+      email: formData.email || formData.phone + '@okcharge.local',
+      amount: currentPrice * 100, // Paystack uses kobo (multiply by 100)
+      currency: 'NGN',
+      ref: reference,
+      firstname: formData.name.split(' ')[0],
+      lastname: formData.name.split(' ').slice(1).join(' ') || '',
+      phone: formData.phone,
+      metadata: {
+        custom_fields: [
+          {
+            display_name: 'Customer Name',
+            variable_name: 'customer_name',
+            value: formData.name
+          },
+          {
+            display_name: 'Duration',
+            variable_name: 'duration',
+            value: `${duration} hour${duration !== '1' ? 's' : ''}`
+          },
+          {
+            display_name: 'Station',
+            variable_name: 'station',
+            value: 'Akure Main Branch'
+          }
+        ]
+      },
+      callback: function(response: any) {
+        // Payment successful
+        alert('Payment successful! Reference: ' + response.reference);
+        // TODO: Save rental to database here
+        setLoading(false);
+        // Redirect to success page or show ticket
+        router.push('/rent/success?ref=' + response.reference);
+      },
+      onClose: function() {
+        alert('Payment window closed. Please try again.');
+        setLoading(false);
+      }
+    });
+
+    if (handler) {
+      handler.openIframe();
+    } else {
+      alert('Payment system is loading. Please try again in a moment.');
       setLoading(false);
-      alert('Redirecting to Paystack...');
-    }, 1000);
+    }
   };
 
   return (
@@ -38,7 +109,7 @@ export default function RentPage() {
       fontFamily: 'sans-serif', 
       backgroundColor: '#f8fafc', 
       minHeight: '100vh', 
-      paddingBottom: '100px' // Space for sticky button
+      paddingBottom: '100px'
     }}>
       {/* Header */}
       <div style={{ backgroundColor: '#0f172a', color: 'white', padding: '20px', textAlign: 'center' }}>
@@ -119,40 +190,26 @@ export default function RentPage() {
               I agree to the <a href="/terms" target="_blank" style={{ color: '#2563eb', textDecoration: 'none' }}>Terms & Conditions</a>, including the ₦15,000 replacement fee for unreturned power banks.
             </label>
           </div>
-        </form>
-      </div>
 
-      {/* Sticky Pay Button */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: 'white',
-        padding: '15px 20px',
-        boxShadow: '0 -2px 10px rgba(0,0,0,0.1)',
-        display: 'flex',
-        justifyContent: 'center'
-      }}>
-        <button
-          onClick={handleCheckout}
-          disabled={loading}
-          style={{
-            width: '100%',
-            maxWidth: '500px',
-            padding: '16px',
-            backgroundColor: loading ? '#94a3b8' : '#10b981',
-            color: 'white',
-            border: 'none',
-            borderRadius: '12px',
-            fontSize: '18px',
-            fontWeight: 'bold',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            boxShadow: '0 4px 6px rgba(16, 185, 129, 0.3)'
-          }}
-        >
-          {loading ? 'Processing...' : `Pay ₦${currentPrice} & Rent`}
-        </button>
+          <button
+            type="submit"
+            disabled={loading || !paystackScriptLoaded}
+            style={{
+              width: '100%',
+              padding: '16px',
+              backgroundColor: loading || !paystackScriptLoaded ? '#94a3b8' : '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              cursor: loading || !paystackScriptLoaded ? 'not-allowed' : 'pointer',
+              boxShadow: '0 4px 6px rgba(16, 185, 129, 0.3)'
+            }}
+          >
+            {loading ? 'Processing...' : !paystackScriptLoaded ? 'Loading...' : `Pay ₦${currentPrice} & Rent`}
+          </button>
+        </form>
       </div>
     </main>
   );
