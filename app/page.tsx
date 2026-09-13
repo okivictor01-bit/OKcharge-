@@ -1,24 +1,8 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 
 export default function HomePage() {
-  const [availableCount, setAvailableCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    const fetchAvailability = async () => {
-      const { count } = await supabase
-        .from('power_banks')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'available');
-      
-      setAvailableCount(count || 0);
-    };
-    fetchAvailability();
-  }, []);
-
   return (
     <main style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
       
@@ -107,26 +91,6 @@ export default function HomePage() {
 
         {/* The Content */}
         <div style={{ maxWidth: '600px', margin: '0 auto', position: 'relative', zIndex: 2, color: 'white' }}>
-          <div style={{ 
-            display: 'inline-flex', 
-            alignItems: 'center', 
-            gap: '8px', 
-            backgroundColor: 'rgba(16, 185, 129, 0.2)', 
-            color: '#34d399', 
-            padding: '8px 16px', 
-            borderRadius: '50px', 
-            fontSize: '14px', 
-            fontWeight: '600',
-            marginBottom: '25px',
-            border: '1px solid rgba(16, 185, 129, 0.3)'
-          }}>
-            <span style={{ 
-              width: '8px', height: '8px', backgroundColor: '#34d399', borderRadius: '50%',
-              animation: 'pulse 2s infinite'
-            }} />
-            {availableCount !== null ? `${availableCount} Power Banks Available in Akure` : 'Loading availability...'}
-          </div>
-
           <h1 style={{ fontSize: 'clamp(32px, 5vw, 48px)', fontWeight: '800', margin: '0 0 15px 0', lineHeight: '1.2', letterSpacing: '-1px' }}>
             Never Run Out of <span style={{ color: '#34d399' }}>Battery</span> Again.
           </h1>
@@ -162,7 +126,7 @@ export default function HomePage() {
                 e.currentTarget.style.boxShadow = '0 10px 25px rgba(16, 185, 129, 0.4)';
               }}
             >
-               Rent a Power Bank Now
+               ⚡ Rent a Power Bank Now
             </Link>
             
             <p style={{ fontSize: '14px', color: '#94a3b8', margin: '10px 0 0 0' }}>
@@ -185,7 +149,7 @@ export default function HomePage() {
           textAlign: 'center'
         }}>
           <div>
-            <div style={{ fontSize: '28px', marginBottom: '8px' }}></div>
+            <div style={{ fontSize: '28px', marginBottom: '8px' }}>🔒</div>
             <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 5px 0' }}>Paystack Secured</h3>
             <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>100% safe & encrypted payments</p>
           </div>
@@ -278,14 +242,6 @@ export default function HomePage() {
           © {new Date().getFullYear()} OKcharge. All rights reserved.
         </p>
       </div>
-
-      <style>{`
-        @keyframes pulse {
-          0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7); }
-          70% { box-shadow: 0 0 0 10px rgba(52, 211, 153, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
-        }
-      `}</style>
     </main>
   );
 }
