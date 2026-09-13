@@ -76,9 +76,11 @@ export default function OwnerLoginPage() {
             </button>
           </form>
 
-          {/* NEW FORGOT PASSWORD LINK */}
-          <div style={{ marginBottom: '20px' }}>
-            <a href="/auth/forgot-password" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '14px' }}>Forgot Password?</a>
+          {/* SUPER OBVIOUS FORGOT PASSWORD LINK --> THIS CANNOT BE MISSED */}
+          <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#fef3c7', borderRadius: '8px', border: '2px solid #f59e0b', textAlign: 'center' }}>
+            <a href="/auth/forgot-password" style={{ color: '#92400e', textDecoration: 'none', fontSize: '16px', fontWeight: 'bold' }}>
+              🔑 Forgot Password? Click Here
+            </a>
           </div>
 
           <div style={{ fontSize: '14px', color: '#64748b' }}>
