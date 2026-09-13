@@ -2,8 +2,11 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function AdminLoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,46 +18,59 @@ export default function AdminLoginPage() {
     setError('');
 
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: password,
+      email,
+      password,
     });
 
     if (error) {
       setError(error.message);
       setLoading(false);
-    } else {
-      // Hard redirect to admin dashboard
-      window.location.href = '/admin/dashboard';
+      return;
+    }
+
+    if (data.user) {
+      router.push('/admin/dashboard');
     }
   };
 
-  const inputStyle = {
+  const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '15px',
     marginBottom: '20px',
     border: '1px solid #ddd',
     borderRadius: '8px',
     fontSize: '16px',
-    boxSizing: 'border-box' as const
+    boxSizing: 'border-box'
   };
 
   return (
-    <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '400px', margin: '0 auto', marginTop: '50px' }}>
-      <h1 style={{ fontSize: '24px', marginBottom: '10px', textAlign: 'center' }}>Admin Login</h1>
-      <p style={{ color: '#64748b', marginBottom: '30px', textAlign: 'center' }}>Access the OKcharge Admin Panel</p>
+    <main style={{ padding: '40px 20px', fontFamily: 'sans-serif', maxWidth: '400px', margin: '0 auto', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+        <img src="/logo.png" alt="OKcharge" style={{ height: '50px', marginBottom: '20px' }} />
+        <h1 style={{ fontSize: '24px', color: '#0f172a', marginBottom: '10px' }}>Admin Login</h1>
+        <p style={{ color: '#64748b', fontSize: '14px' }}>Sign in to access the admin dashboard</p>
+      </div>
 
       {error && (
-        <div style={{ padding: '15px', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '20px' }}>
-          {error}
+        <div style={{
+          padding: '12px',
+          borderRadius: '8px',
+          marginBottom: '20px',
+          backgroundColor: '#fee2e2',
+          color: '#b91c1c',
+          fontSize: '14px',
+          textAlign: 'center'
+        }}>
+           {error}
         </div>
       )}
 
       <form onSubmit={handleLogin}>
-        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Admin Email</label>
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Email Address</label>
         <input
           style={inputStyle}
           type="email"
-          placeholder="admin@example.com"
+          placeholder="admin@okcharge.ng"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -76,24 +92,25 @@ export default function AdminLoginPage() {
           style={{
             width: '100%',
             padding: '15px',
-            backgroundColor: loading ? '#999' : '#7c3aed', // Purple for admin
+            backgroundColor: loading ? '#999' : '#0f172a',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
-            fontSize: '18px',
+            fontSize: '16px',
             fontWeight: 'bold',
             cursor: 'pointer'
           }}
         >
-          {loading ? 'Logging in...' : 'Login as Admin'}
+          {loading ? 'Signing in...' : 'Sign In'}
         </button>
       </form>
 
-      <div style={{ marginTop: '30px', textAlign: 'center', fontSize: '14px' }}>
-        <p style={{ color: '#64748b' }}>Are you a Location Owner?</p>
-        <a href="/auth/login" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 'bold' }}>
-          Partner Login Here
-        </a>
+      <div style={{ textAlign: 'center', marginTop: '20px' }}>
+        <a href="/auth/forgot-password" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '14px' }}>Forgot Password?</a>
+      </div>
+
+      <div style={{ textAlign: 'center', marginTop: '20px' }}>
+        <Link href="/" style={{ color: '#64748b', textDecoration: 'none', fontSize: '14px' }}>← Back to Home</Link>
       </div>
     </main>
   );
