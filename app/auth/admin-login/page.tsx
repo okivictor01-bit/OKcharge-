@@ -33,84 +33,59 @@ export default function AdminLoginPage() {
     }
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '15px',
-    marginBottom: '20px',
-    border: '1px solid #ddd',
-    borderRadius: '8px',
-    fontSize: '16px',
-    boxSizing: 'border-box'
-  };
-
   return (
-    <main style={{ padding: '40px 20px', fontFamily: 'sans-serif', maxWidth: '400px', margin: '0 auto', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-        <img src="/logo.png" alt="OKcharge" style={{ height: '50px', marginBottom: '20px' }} />
-        <h1 style={{ fontSize: '24px', color: '#0f172a', marginBottom: '10px' }}>Admin Login</h1>
-        <p style={{ color: '#64748b', fontSize: '14px' }}>Sign in to access the admin dashboard</p>
-      </div>
+    <main style={{ fontFamily: 'sans-serif', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
+        <div style={{ maxWidth: '400px', width: '100%', textAlign: 'center' }}>
+          <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#0f172a', marginBottom: '10px' }}>Admin Login</h1>
+          <p style={{ color: '#64748b', marginBottom: '30px' }}>Access the OKcharge Admin Panel</p>
 
-      {error && (
-        <div style={{
-          padding: '12px',
-          borderRadius: '8px',
-          marginBottom: '20px',
-          backgroundColor: '#fee2e2',
-          color: '#b91c1c',
-          fontSize: '14px',
-          textAlign: 'center'
-        }}>
-           {error}
+          {error && (
+            <div style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px' }}>
+              ❌ {error}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} style={{ textAlign: 'left' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#0f172a' }}>Admin Email</label>
+            <input
+              type="email"
+              placeholder="admin@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              style={{ width: '100%', padding: '12px', marginBottom: '20px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+            />
+
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#0f172a' }}>Password</label>
+            <input
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              style={{ width: '100%', padding: '12px', marginBottom: '20px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+            />
+
+            <button
+              type="submit"
+              disabled={loading}
+              style={{ width: '100%', padding: '14px', backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '15px' }}
+            >
+              {loading ? 'Logging in...' : 'Login as Admin'}
+            </button>
+          </form>
+
+          {/* NEW FORGOT PASSWORD LINK */}
+          <div style={{ marginBottom: '20px' }}>
+            <a href="/auth/forgot-password" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '14px' }}>Forgot Password?</a>
+          </div>
+
+          <div style={{ fontSize: '14px', color: '#64748b' }}>
+            Are you a Location Owner? <br />
+            <Link href="/auth/login" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 'bold' }}>Partner Login Here</Link>
+          </div>
         </div>
-      )}
-
-      <form onSubmit={handleLogin}>
-        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Email Address</label>
-        <input
-          style={inputStyle}
-          type="email"
-          placeholder="admin@okcharge.ng"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-
-        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Password</label>
-        <input
-          style={inputStyle}
-          type="password"
-          placeholder="Enter your password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            width: '100%',
-            padding: '15px',
-            backgroundColor: loading ? '#999' : '#0f172a',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            cursor: 'pointer'
-          }}
-        >
-          {loading ? 'Signing in...' : 'Sign In'}
-        </button>
-      </form>
-
-      <div style={{ textAlign: 'center', marginTop: '20px' }}>
-        <a href="/auth/forgot-password" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '14px' }}>Forgot Password?</a>
-      </div>
-
-      <div style={{ textAlign: 'center', marginTop: '20px' }}>
-        <Link href="/" style={{ color: '#64748b', textDecoration: 'none', fontSize: '14px' }}>← Back to Home</Link>
       </div>
     </main>
   );
