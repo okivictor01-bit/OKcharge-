@@ -59,7 +59,7 @@ export default function StaffLoginPage() {
 
         {error && (
           <div style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px' }}>
-            ❌ {error}
+             {error}
           </div>
         )}
 
@@ -92,11 +92,6 @@ export default function StaffLoginPage() {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-
-        {/* NEW FORGOT PASSWORD LINK */}
-        <div>
-          <a href="/auth/forgot-password" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '14px' }}>Forgot Password?</a>
-        </div>
       </div>
     </main>
   );
