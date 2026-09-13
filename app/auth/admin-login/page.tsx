@@ -42,7 +42,7 @@ export default function AdminLoginPage() {
 
           {error && (
             <div style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px' }}>
-              ❌ {error}
+               {error}
             </div>
           )}
 
@@ -75,11 +75,6 @@ export default function AdminLoginPage() {
               {loading ? 'Logging in...' : 'Login as Admin'}
             </button>
           </form>
-
-          {/* NEW FORGOT PASSWORD LINK */}
-          <div style={{ marginBottom: '20px' }}>
-            <a href="/auth/forgot-password" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '14px' }}>Forgot Password?</a>
-          </div>
 
           <div style={{ fontSize: '14px', color: '#64748b' }}>
             Are you a Location Owner? <br />
