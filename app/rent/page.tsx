@@ -12,11 +12,12 @@ export default function RentPage() {
   const [paystackScriptLoaded, setPaystackScriptLoaded] = useState(false);
   const [selectedDuration, setSelectedDuration] = useState('1');
 
+  // UPDATED PRICES HERE
   const prices: Record<string, number> = {
     '1': 100,
-    '3': 200,
-    '5': 300,
-    '24': 800
+    '3': 250,
+    '5': 400,
+    '24': 900
   };
 
   const currentPrice = prices[duration] || 100;
@@ -174,7 +175,7 @@ export default function RentPage() {
                     fontSize: '18px',
                     marginTop: '5px'
                   }}>
-                    ₦{price}
+                    {price}
                   </div>
                 </button>
               );
