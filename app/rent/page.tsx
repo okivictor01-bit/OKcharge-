@@ -78,11 +78,6 @@ export default function RentPage() {
             display_name: 'Duration',
             variable_name: 'duration',
             value: `${duration} hour${duration !== '1' ? 's' : ''}`
-          },
-          {
-            display_name: 'Station',
-            variable_name: 'station',
-            value: 'Akure Main Branch'
           }
         ]
       },
@@ -120,9 +115,8 @@ export default function RentPage() {
         borderBottomRightRadius: '30px',
         boxShadow: '0 10px 40px rgba(15, 23, 42, 0.3)'
       }}>
-        <div style={{ fontSize: '40px', marginBottom: '10px' }}></div>
+        <div style={{ fontSize: '40px', marginBottom: '10px' }}>🔋</div>
         <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '700', letterSpacing: '-0.5px' }}>Complete Your Rental</h1>
-        <p style={{ margin: '8px 0 0 0', fontSize: '15px', color: '#94a3b8', fontWeight: '500' }}>📍 Akure Main Branch</p>
       </div>
 
       <div style={{ maxWidth: '500px', margin: '0 auto', padding: '20px' }}>
@@ -167,7 +161,7 @@ export default function RentPage() {
                     cursor: 'pointer',
                     textAlign: 'center',
                     transition: 'all 0.3s ease',
-                    transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+                    transform: isSelected ? 'scale(1.02)' : 'scale(1)',
                     boxShadow: isSelected ? '0 4px 12px rgba(16, 185, 129, 0.2)' : 'none'
                   }}
                 >
@@ -323,18 +317,10 @@ export default function RentPage() {
               I agree to the <a href="/terms" target="_blank" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '600' }}>Terms & Conditions</a>, including the <strong style={{ color: '#ef4444' }}>₦15,000</strong> replacement fee for unreturned power banks.
             </label>
           </div>
-
-          {/* Submit Button - Hidden on form, shown in sticky footer */}
-          <button
-            type="submit"
-            style={{ display: 'none' }}
-          >
-            Pay
-          </button>
         </form>
       </div>
 
-      {/* Sticky Pay Button with Price Animation */}
+      {/* Sticky Pay Button */}
       <div style={{
         position: 'fixed',
         bottom: 0,
@@ -358,7 +344,6 @@ export default function RentPage() {
             width: '100%',
             maxWidth: '500px',
             padding: '18px 24px',
-            backgroundColor: loading || !paystackScriptLoaded ? '#94a3b8' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
             background: loading || !paystackScriptLoaded ? '#94a3b8' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
             color: 'white',
             border: 'none',
@@ -367,20 +352,7 @@ export default function RentPage() {
             fontWeight: '700',
             cursor: loading || !paystackScriptLoaded ? 'not-allowed' : 'pointer',
             boxShadow: loading || !paystackScriptLoaded ? 'none' : '0 6px 20px rgba(16, 185, 129, 0.4)',
-            transition: 'all 0.3s ease',
-            transform: loading || !paystackScriptLoaded ? 'none' : 'scale(1)',
-            position: 'relative',
-            overflow: 'hidden'
-          }}
-          onMouseEnter={(e) => {
-            if (!loading && paystackScriptLoaded) {
-              e.currentTarget.style.transform = 'scale(1.02)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!loading && paystackScriptLoaded) {
-              e.currentTarget.style.transform = 'scale(1)';
-            }
+            transition: 'all 0.3s ease'
           }}
         >
           {loading ? (
@@ -410,10 +382,6 @@ export default function RentPage() {
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
-        }
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
         }
       `}</style>
     </main>
