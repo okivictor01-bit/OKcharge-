@@ -100,7 +100,21 @@ export default function AdminOwners() {
     }
   };
 
-  // NEW: Delete Owner Function with detailed error logging
+  // NEW: Approve Owner Function
+  const handleApproveOwner = async (ownerId: string) => {
+    const { error } = await supabase
+      .from('location_owners')
+      .update({ status: 'approved' })
+      .eq('id', ownerId);
+
+    if (!error) {
+      alert('✅ Owner approved successfully!');
+      fetchOwners();
+    } else {
+      alert('❌ Error: ' + error.message);
+    }
+  };
+
   const handleDeleteOwner = async (ownerId: string, businessName: string) => {
     const confirmDelete = window.confirm(`⚠️ DELETE "${businessName}"?\n\nThis will:\n• Remove the owner permanently\n• Unassign all their locations\n\nThis CANNOT be undone!`);
     if (!confirmDelete) return;
@@ -108,8 +122,6 @@ export default function AdminOwners() {
     try {
       console.log('Starting delete for owner:', ownerId);
       
-      // Step 1: Unassign all locations
-      console.log('Step 1: Unassigning locations...');
       const { error: locError } = await supabase
         .from('locations')
         .update({ owner_id: null })
@@ -117,37 +129,22 @@ export default function AdminOwners() {
       
       if (locError) {
         console.error('Location update error:', locError);
-        alert('⚠️ Warning: Could not unassign locations: ' + locError.message);
-      } else {
-        console.log('✅ Locations unassigned successfully');
       }
 
-      // Step 2: Delete the owner
-      console.log('Step 2: Deleting owner...');
       const { error: ownerError } = await supabase
         .from('location_owners')
         .delete()
         .eq('id', ownerId);
       
       if (ownerError) {
-        console.error('Owner delete error:', ownerError);
         throw ownerError;
       }
       
-      console.log('✅ Owner deleted successfully');
       alert(`✅ "${businessName}" has been deleted.`);
       fetchOwners();
     } catch (error: any) {
       console.error('Full error:', error);
       let errorMsg = error.message || 'Unknown error';
-      
-      // Check for common RLS errors
-      if (errorMsg.includes('new row violates row-level security')) {
-        errorMsg = 'Permission denied. You need to enable DELETE permission in Supabase RLS policies for the location_owners table.';
-      } else if (errorMsg.includes('violates foreign key constraint')) {
-        errorMsg = 'Cannot delete: This owner still has associated records. Please remove all associations first.';
-      }
-      
       alert('❌ Delete failed:\n' + errorMsg);
     }
   };
@@ -266,6 +263,23 @@ export default function AdminOwners() {
                      Reset Password
                   </button>
 
+                  {/* NEW: Approve Owner Button */}
+                  <button
+                    onClick={() => handleApproveOwner(owner.id)}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      fontSize: '13px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ✓ Approve Owner
+                  </button>
+
                   <button
                     onClick={() => handleSetPending(owner.id)}
                     style={{
@@ -282,7 +296,6 @@ export default function AdminOwners() {
                     Set Pending
                   </button>
 
-                  {/* NEW: Delete Button */}
                   <button
                     onClick={() => handleDeleteOwner(owner.id, owner.business_name)}
                     style={{
