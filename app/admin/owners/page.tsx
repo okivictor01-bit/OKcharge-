@@ -11,6 +11,7 @@ export default function AdminOwners() {
   const [loading, setLoading] = useState(true);
   const [selectedOwner, setSelectedOwner] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     fetchOwners();
@@ -35,12 +36,32 @@ export default function AdminOwners() {
     if (!error) setLocations(data || []);
   };
 
-  // NEW: Reset Password Function
+  const handleAssignLocation = async () => {
+    if (!selectedOwner || !selectedLocation) {
+      alert('Please select both owner and location');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('locations')
+      .update({ owner_id: selectedOwner })
+      .eq('id', selectedLocation);
+
+    if (!error) {
+      alert('✅ Location assigned successfully!');
+      setSelectedOwner('');
+      setSelectedLocation('');
+      fetchLocations();
+    } else {
+      alert('❌ Error: ' + error.message);
+    }
+  };
+
   const handleResetPassword = async (userId: string, businessName: string) => {
     const newPassword = prompt(`Enter a new temporary password for ${businessName} (min 6 characters):`);
     if (!newPassword) return;
     if (newPassword.length < 6) {
-      alert(' Password must be at least 6 characters.');
+      alert('❌ Password must be at least 6 characters.');
       return;
     }
 
@@ -66,27 +87,6 @@ export default function AdminOwners() {
     }
   };
 
-  const handleAssignLocation = async () => {
-    if (!selectedOwner || !selectedLocation) {
-      alert('Please select both owner and location');
-      return;
-    }
-
-    const { error } = await supabase
-      .from('locations')
-      .update({ owner_id: selectedOwner })
-      .eq('id', selectedLocation);
-
-    if (!error) {
-      alert('✅ Location assigned successfully!');
-      setSelectedOwner('');
-      setSelectedLocation('');
-      fetchLocations();
-    } else {
-      alert('Error: ' + error.message);
-    }
-  };
-
   const handleSetPending = async (ownerId: string) => {
     const { error } = await supabase
       .from('location_owners')
@@ -94,38 +94,71 @@ export default function AdminOwners() {
       .eq('id', ownerId);
 
     if (!error) {
-      alert('Owner status set to pending');
+      alert('✅ Owner status set to pending');
       fetchOwners();
     } else {
-      alert('Error: ' + error.message);
+      alert('❌ Error: ' + error.message);
     }
   };
 
-  const handleDelete = async (id: string, userId: string) => {
-    if (!window.confirm('Delete this owner? This cannot be undone.')) return;
+  // NEW: Delete Owner Function
+  const handleDeleteOwner = async (ownerId: string, userId: string, businessName: string) => {
+    const confirmDelete = window.confirm(
+      `⚠️ Are you sure you want to DELETE "${businessName}"?\n\nThis will permanently remove:\n• The owner's profile\n• Their assigned locations\n• Their account access\n\nThis action CANNOT be undone!`
+    );
+
+    if (!confirmDelete) return;
 
     try {
-      const { error: dbError } = await supabase
-        .from('location_owners')
+      // 1. Delete associated locations first
+      const { error: locError } = await supabase
+        .from('locations')
         .delete()
-        .eq('id', id);
+        .eq('owner_id', ownerId);
 
-      if (dbError) throw dbError;
-
-      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-      if (authError) {
-        console.warn('Auth deletion warning:', authError.message);
+      if (locError) {
+        console.warn('Location deletion warning:', locError.message);
       }
 
-      alert('✅ Owner deleted successfully!');
+      // 2. Delete the owner record from database
+      const { error: ownerError } = await supabase
+        .from('location_owners')
+        .delete()
+        .eq('id', ownerId);
+
+      if (ownerError) throw ownerError;
+
+      // 3. Delete the auth user (optional, may require service role key)
+      try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({ user_id: userId }),
+        });
+      } catch (authError) {
+        console.warn('Auth user deletion failed (owner record still deleted):', authError);
+      }
+
+      alert(`✅ "${businessName}" has been permanently deleted.`);
       fetchOwners();
     } catch (error: any) {
-      alert('❌ Error: ' + error.message);
+      alert('❌ Error deleting owner: ' + error.message);
     }
   };
 
   const getUnassignedLocations = () => {
     return locations.filter(loc => !loc.owner_id);
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-NG', { day: 'numeric', month: 'numeric', year: 'numeric' });
   };
 
   if (loading) return <main style={{ padding: '20px', textAlign: 'center' }}>Loading...</main>;
@@ -138,6 +171,18 @@ export default function AdminOwners() {
           ← Back to Dashboard
         </a>
       </div>
+
+      {message && (
+        <div style={{ 
+          padding: '15px', 
+          borderRadius: '8px', 
+          marginBottom: '20px', 
+          backgroundColor: message.includes('✅') ? '#dcfce7' : '#fee2e2', 
+          color: message.includes('✅') ? '#15803d' : '#b91c1c' 
+        }}>
+          {message}
+        </div>
+      )}
 
       {/* Assign Location Section */}
       <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '30px' }}>
@@ -197,17 +242,17 @@ export default function AdminOwners() {
                     {owner.phone && <span>📞 {owner.phone}</span>}
                     {owner.email && <span>✉️ {owner.email}</span>}
                   </div>
-                  <div style={{ marginTop: '10px', fontSize: '14px' }}>
+                  <div style={{ marginTop: '10px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>💰 Revenue Share: {owner.revenue_share || '30'}%</span>
                     <button
                       onClick={() => {/* Edit revenue share logic */}}
-                      style={{ marginLeft: '10px', padding: '4px 12px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: 'white', cursor: 'pointer' }}
+                      style={{ padding: '4px 12px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: 'white', cursor: 'pointer' }}
                     >
                       Edit
                     </button>
                   </div>
                   <p style={{ margin: '10px 0 0 0', fontSize: '13px', color: '#94a3b8' }}>
-                    Registered: {owner.created_at ? new Date(owner.created_at).toLocaleDateString() : 'N/A'}
+                    Registered: {formatDate(owner.created_at)}
                   </p>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'flex-end' }}>
@@ -222,7 +267,7 @@ export default function AdminOwners() {
                     ✓ {owner.status === 'approved' ? 'Approved' : 'Pending'}
                   </span>
                   
-                  {/* NEW: Reset Password Button */}
+                  {/* Reset Password Button */}
                   <button
                     onClick={() => handleResetPassword(owner.user_id, owner.business_name)}
                     style={{
@@ -239,6 +284,7 @@ export default function AdminOwners() {
                     🔑 Reset Password
                   </button>
 
+                  {/* Set Pending Button */}
                   <button
                     onClick={() => handleSetPending(owner.id)}
                     style={{
@@ -253,6 +299,23 @@ export default function AdminOwners() {
                     }}
                   >
                     Set Pending
+                  </button>
+
+                  {/* NEW: Delete Button */}
+                  <button
+                    onClick={() => handleDeleteOwner(owner.id, owner.user_id, owner.business_name)}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      fontSize: '13px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                     Delete Owner
                   </button>
                 </div>
               </div>
