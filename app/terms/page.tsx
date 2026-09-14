@@ -1,6 +1,6 @@
 export default function TermsPage() {
   return (
-    <main style={{ padding: '40px 20px', maxWidth: '900px', margin: '0 auto', fontFamily: 'sans-serif', lineHeight: '1.8', color: '#334155' }}>
+    <main style={{ padding: '40px 20px', maxWidth: '800px', margin: '0 auto', fontFamily: 'sans-serif', lineHeight: '1.8', color: '#334155' }}>
       <h1 style={{ fontSize: '32px', fontWeight: 'bold', color: '#0f172a', marginBottom: '10px' }}>OKcharge Terms & Conditions</h1>
       <p style={{ marginBottom: '30px', color: '#64748b', fontSize: '16px' }}>Last Updated: September 13, 2026</p>
 
@@ -55,9 +55,9 @@ export default function TermsPage() {
             </thead>
             <tbody>
               <tr><td style={{ padding: '10px' }}>1 Hour</td><td style={{ padding: '10px' }}>₦100</td></tr>
-              <tr><td style={{ padding: '10px' }}>3 Hours</td><td style={{ padding: '10px' }}>200</td></tr>
-              <tr><td style={{ padding: '10px' }}>5 Hours</td><td style={{ padding: '10px' }}>₦300</td></tr>
-              <tr><td style={{ padding: '10px' }}>24 Hours</td><td style={{ padding: '10px' }}>₦800</td></tr>
+              <tr><td style={{ padding: '10px' }}>3 Hours</td><td style={{ padding: '10px' }}>₦250</td></tr>
+              <tr><td style={{ padding: '10px' }}>5 Hours</td><td style={{ padding: '10px' }}>₦400</td></tr>
+              <tr><td style={{ padding: '10px' }}>24 Hours</td><td style={{ padding: '10px' }}>₦900</td></tr>
             </tbody>
           </table>
         </div>
@@ -251,7 +251,7 @@ export default function TermsPage() {
         <div style={{ backgroundColor: '#f0fdf4', padding: '20px', borderRadius: '8px', margin: '15px 0', borderLeft: '4px solid #10b981' }}>
           <p style={{ margin: '0 0 10px 0', fontWeight: 'bold' }}>OKcharge Contact Information:</p>
           <p style={{ margin: '5px 0' }}>📍 Location: Akure, Ondo State, Nigeria</p>
-          <p style={{ margin: '5px 0' }}> Phone/WhatsApp: +234 703 238 5674</p>
+          <p style={{ margin: '5px 0' }}>📞 Phone/WhatsApp: +234 703 238 5674</p>
           <p style={{ margin: '5px 0' }}>✉️ Email: support@okcharge.ng</p>
         </div>
 
@@ -291,7 +291,7 @@ export default function TermsPage() {
         <h3 style={{ margin: '0 0 15px 0', fontSize: '20px' }}>Contact OKcharge</h3>
         <p style={{ margin: '5px 0' }}><strong>OKcharge — Power Bank Rentals</strong></p>
         <p style={{ margin: '5px 0' }}>📍 Akure, Ondo State, Nigeria</p>
-        <p style={{ margin: '5px 0' }}> +234 703 238 5674</p>
+        <p style={{ margin: '5px 0' }}>📞 +234 703 238 5674</p>
         <p style={{ margin: '5px 0' }}>✉️ support@okcharge.ng</p>
       </div>
     </main>
