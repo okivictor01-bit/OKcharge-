@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function PowerBankPage() {
+function PowerBankContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pbCode = searchParams.get('code');
@@ -271,5 +271,17 @@ export default function PowerBankPage() {
         </a>
       </div>
     </main>
+  );
+}
+
+export default function PowerBankPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'sans-serif' }}>
+        Loading power bank details...
+      </div>
+    }>
+      <PowerBankContent />
+    </Suspense>
   );
 }
