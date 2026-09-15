@@ -80,30 +80,45 @@ export default function RentPage() {
     const currentFormData = { ...formData };
     const currentPriceValue = currentPrice;
 
-    const paymentCallback = function(response: any) {
+    const paymentCallback = async function(response: any) {
       console.log('Payment successful:', response);
+      console.log('Creating rental with ticket:', ticketCode);
       
-      supabase.from('rentals').insert({
-        ticket_code: ticketCode,
-        customer_name: currentFormData.name,
-        customer_phone: currentFormData.phone,
-        customer_email: currentFormData.email || null,
-        duration_hours: parseInt(currentDuration),
-        amount_paid: currentPriceValue,
-        payment_reference: response.reference,
-        status: 'paid',
-        payment_status: 'paid',
-        started_at: new Date().toISOString(),
-        created_at: new Date().toISOString()
-      }).then(({ error }) => {
+      try {
+        // Insert rental with minimal required fields
+        const { data, error } = await supabase
+          .from('rentals')
+          .insert({
+            ticket_code: ticketCode,
+            customer_name: currentFormData.name,
+            customer_phone: currentFormData.phone,
+            duration_hours: parseInt(currentDuration),
+            amount_paid: currentPriceValue,
+            payment_reference: response.reference,
+            status: 'paid',
+            payment_status: 'paid',
+            started_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
         if (error) {
-          console.error('Database error:', error);
-          alert('Payment successful but there was an issue saving your rental. Please contact support with ticket: ' + ticketCode);
+          console.error('Database error details:', error);
+          alert(`Payment successful but rental save failed: ${error.message}\n\nTicket: ${ticketCode}\nReference: ${response.reference}\n\nPlease screenshot this and contact support.`);
+          setLoading(false);
+          return;
         }
+
+        console.log('Rental created successfully:', data);
         
+        // Redirect to success page
         setLoading(false);
         router.push(`/rent/success?ref=${response.reference}&ticket=${ticketCode}`);
-      });
+      } catch (dbError: any) {
+        console.error('Unexpected error:', dbError);
+        alert(`Payment successful but there was an issue saving your rental.\n\nTicket: ${ticketCode}\nError: ${dbError.message}\n\nPlease contact support.`);
+        setLoading(false);
+      }
     };
 
     const closeCallback = function() {
@@ -161,7 +176,7 @@ export default function RentPage() {
         borderBottomRightRadius: '30px',
         boxShadow: '0 10px 40px rgba(15, 23, 42, 0.3)'
       }}>
-        <div style={{ fontSize: '40px', marginBottom: '10px' }}></div>
+        <div style={{ fontSize: '40px', marginBottom: '10px' }}>🔋</div>
         <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '700', letterSpacing: '-0.5px' }}>Complete Your Rental</h1>
       </div>
 
@@ -347,7 +362,7 @@ export default function RentPage() {
                 fontWeight: '500'
               }}
             >
-              I agree to the <a href="/terms" target="_blank" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '600' }}>Terms & Conditions</a>, including the <strong style={{ color: '#ef4444' }}>₦15,000</strong> replacement fee for unreturned power banks.
+              I agree to the <a href="/terms" target="_blank" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '600' }}>Terms & Conditions</a>, including the <strong style={{ color: '#ef4444' }}>15,000</strong> replacement fee for unreturned power banks.
             </label>
           </div>
 
