@@ -64,38 +64,12 @@ function PowerBankContent() {
         .single();
 
       if (rentalError || !rental) {
-        // Try with 'active' status as fallback
-        const { data: rental2, error: rentalError2 } = await supabase
-          .from('rentals')
-          .select('*')
-          .eq('ticket_code', ticketCode.trim())
-          .eq('status', 'active')
-          .single();
-
-        if (rentalError2 || !rental2) {
-          setMessage('Invalid or unpaid ticket code. Please check and try again.');
-          setMessageType('error');
-          setLoading(false);
-          return;
-        }
-        
-        // Use the rental found with 'active' status
-        await completeHandover(rental2);
-      } else {
-        // Use the rental found with 'paid' status
-        await completeHandover(rental);
+        setMessage('Invalid or unpaid ticket code. Please check and try again.');
+        setMessageType('error');
+        setLoading(false);
+        return;
       }
-    } catch (error: any) {
-      console.error('Handover error:', error);
-      const detail = error?.message || error?.details || error?.hint || JSON.stringify(error);
-      setMessage(`Error processing handover: ${detail}`);
-      setMessageType('error');
-      setLoading(false);
-    }
-  };
 
-  const completeHandover = async (rental: any) => {
-    try {
       // Update power bank status to 'rented'
       const { error: pbError } = await supabase
         .from('power_banks')
@@ -107,11 +81,14 @@ function PowerBankContent() {
 
       if (pbError) {
         console.error('Power bank update error:', pbError);
-        throw pbError;
+        setMessage('Error updating power bank status: ' + pbError.message);
+        setMessageType('error');
+        setLoading(false);
+        return;
       }
 
       // Update rental status to 'active' and assign power bank
-      const { error: rentalError } = await supabase
+      const { error: rentalUpdateError } = await supabase
         .from('rentals')
         .update({ 
           status: 'active',
@@ -120,9 +97,12 @@ function PowerBankContent() {
         })
         .eq('id', rental.id);
 
-      if (rentalError) {
-        console.error('Rental update error:', rentalError);
-        throw rentalError;
+      if (rentalUpdateError) {
+        console.error('Rental update error:', rentalUpdateError);
+        setMessage('Error updating rental: ' + rentalUpdateError.message);
+        setMessageType('error');
+        setLoading(false);
+        return;
       }
 
       setMessage(`✅ Handover successful! Power bank ${powerBank.pb_code} handed to ${rental.customer_name}`);
@@ -131,10 +111,9 @@ function PowerBankContent() {
       
       // Refresh power bank data
       fetchPowerBank(powerBank.pb_code);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Handover error:', error);
-      const detail = error?.message || error?.details || error?.hint || JSON.stringify(error);
-      setMessage(`Error completing handover: ${detail}`);
+      setMessage('Error completing handover. Please try again.');
       setMessageType('error');
     } finally {
       setLoading(false);
