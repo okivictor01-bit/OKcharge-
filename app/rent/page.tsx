@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
 export default function RentPage() {
@@ -12,7 +13,7 @@ export default function RentPage() {
   const [paystackScriptLoaded, setPaystackScriptLoaded] = useState(false);
   const [selectedDuration, setSelectedDuration] = useState('1');
 
-  // UPDATED PRICES HERE
+  // Updated Prices
   const prices: Record<string, number> = {
     '1': 100,
     '3': 250,
@@ -57,7 +58,9 @@ export default function RentPage() {
 
     setLoading(true);
 
+    // Generate unique reference and 6-digit ticket code
     const reference = `OKCHARGE_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const ticketCode = `TKT-${Math.floor(100000 + Math.random() * 900000)}`;
 
     const handler = (window as any).PaystackPop?.setup({
       key: 'pk_live_9dd06423b57f6a6f6927e3ea2e28a101baa01fba',
@@ -70,23 +73,39 @@ export default function RentPage() {
       phone: formData.phone,
       metadata: {
         custom_fields: [
-          {
-            display_name: 'Customer Name',
-            variable_name: 'customer_name',
-            value: formData.name
-          },
-          {
-            display_name: 'Duration',
-            variable_name: 'duration',
-            value: `${duration} hour${duration !== '1' ? 's' : ''}`
-          }
+          { display_name: 'Customer Name', variable_name: 'customer_name', value: formData.name },
+          { display_name: 'Duration', variable_name: 'duration', value: `${duration} hour${duration !== '1' ? 's' : ''}` },
+          { display_name: 'Ticket Code', variable_name: 'ticket_code', value: ticketCode }
         ]
       },
-      callback: function(response: any) {
+      callback: async function(response: any) {
+        // 1. Save the rental record to the database immediately
+        try {
+          const { error } = await supabase.from('rentals').insert({
+            ticket_code: ticketCode,
+            customer_name: formData.name,
+            customer_phone: formData.phone,
+            customer_email: formData.email || null,
+            duration_hours: parseInt(duration),
+            amount_paid: currentPrice,
+            payment_reference: response.reference,
+            status: 'active',
+            started_at: new Date().toISOString()
+          });
+
+          if (error) {
+            console.error("Database error:", error);
+          }
+        } catch (dbError) {
+          console.error("Failed to save to DB:", dbError);
+        }
+
+        // 2. Redirect to success page with the ticket code
         setLoading(false);
-        router.push('/rent/success?ref=' + response.reference);
+        router.push(`/rent/success?ref=${response.reference}&ticket=${ticketCode}`);
       },
       onClose: function() {
+        alert('Payment window closed. Please try again.');
         setLoading(false);
       }
     });
@@ -175,7 +194,7 @@ export default function RentPage() {
                     fontSize: '18px',
                     marginTop: '5px'
                   }}>
-                    {price}
+                    ₦{price}
                   </div>
                 </button>
               );
