@@ -54,7 +54,6 @@ export default function RentPage() {
     function onPaymentSuccess(response: any) {
       console.log("Payment successful:", response);
       
-      // Save to database using your exact columns
       supabase.from("rentals").insert({
         ticket_code: ticketCode,
         customer_name: currentFormData.name,
@@ -72,9 +71,35 @@ export default function RentPage() {
           console.error("Database error:", error);
           alert(`Payment successful but save failed: ${error.message}\nTicket: ${ticketCode}`);
         }
-        // Force redirect
         window.location.href = `/rent/success?ref=${response.reference}&ticket=${ticketCode}`;
       });
+    }
+
+    function onPaymentClose() {
+      console.log("Payment window closed");
+      setLoading(false);
+      
+      // Ask user if they actually paid
+      const userPaid = window.confirm("The payment window closed. Did you successfully complete the payment?");
+      
+      if (userPaid) {
+        // Try to find the rental in the database
+        supabase.from("rentals")
+          .select("*")
+          .eq("customer_phone", currentFormData.phone)
+          .eq("status", "paid")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single()
+          .then(({ data, error }) => {
+            if (data && !error) {
+              alert("Payment found! Redirecting to your ticket...");
+              window.location.href = `/rent/success?ref=${data.paystack_reference}&ticket=${data.ticket_code}`;
+            } else {
+              alert("We could not find a successful payment. If money was deducted, please contact support with your phone number.");
+            }
+          });
+      }
     }
 
     try {
@@ -98,10 +123,7 @@ export default function RentPage() {
           ]
         },
         callback: onPaymentSuccess,
-        onClose: () => { 
-          console.log("Payment window closed");
-          setLoading(false); 
-        }
+        onClose: onPaymentClose
       });
 
       if (handler && typeof handler.openIframe === "function") handler.openIframe();
