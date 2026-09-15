@@ -4,14 +4,21 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
+declare global {
+  interface Window {
+    PaystackPop: any;
+  }
+}
+
 export default function RentPage() {
   const router = useRouter();
   const [duration, setDuration] = useState('1');
   const [formData, setFormData] = useState({ name: '', phone: '', email: '' });
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [paystackScriptLoaded, setPaystackScriptLoaded] = useState(false);
+  const [paystackReady, setPaystackReady] = useState(false);
   const [selectedDuration, setSelectedDuration] = useState('1');
+  const [retryCount, setRetryCount] = useState(0);
 
   const prices: Record<string, number> = {
     '1': 100,
@@ -22,19 +29,45 @@ export default function RentPage() {
 
   const currentPrice = prices[duration] || 100;
 
+  // Load Paystack script with retry logic
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    const loadPaystack = () => {
+      // Remove existing script if any
+      const existing = document.getElementById('paystack-script');
+      if (existing) existing.remove();
+
       const script = document.createElement('script');
+      script.id = 'paystack-script';
       script.src = 'https://js.paystack.co/v1/inline.js';
       script.async = true;
-      script.onload = () => setPaystackScriptLoaded(true);
-      document.body.appendChild(script);
-      
-      return () => {
-        document.body.removeChild(script);
+      script.onload = () => {
+        if (window.PaystackPop) {
+          setPaystackReady(true);
+        } else {
+          // Script loaded but PaystackPop not available, retry
+          setTimeout(() => {
+            if (window.PaystackPop) {
+              setPaystackReady(true);
+            } else {
+              setRetryCount(prev => prev + 1);
+            }
+          }, 1000);
+        }
       };
-    }
-  }, []);
+      script.onerror = () => {
+        console.error('Paystack script failed to load');
+        setRetryCount(prev => prev + 1);
+      };
+      document.head.appendChild(script);
+    };
+
+    loadPaystack();
+
+    return () => {
+      const existing = document.getElementById('paystack-script');
+      if (existing) existing.remove();
+    };
+  }, [retryCount]);
 
   const handleDurationSelect = (time: string) => {
     setDuration(time);
@@ -54,13 +87,20 @@ export default function RentPage() {
       return;
     }
 
+    // Check if Paystack is ready
+    if (!window.PaystackPop) {
+      alert('Payment system is still loading. Please wait a moment and try again.');
+      setRetryCount(prev => prev + 1);
+      return;
+    }
+
     setLoading(true);
 
     const reference = `OKCHARGE_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const ticketCode = `TKT-${Math.floor(100000 + Math.random() * 900000)}`;
 
     try {
-      const handler = (window as any).PaystackPop?.setup({
+      const handler = window.PaystackPop.setup({
         key: 'pk_live_9dd06423b57f6a6f6927e3ea2e28a101baa01fba',
         email: formData.email || formData.phone + '@okcharge.local',
         amount: currentPrice * 100,
@@ -77,11 +117,9 @@ export default function RentPage() {
           ]
         },
         callback: async function(response: any) {
-          console.log('Payment successful:', response);
-          
-          // Try to save to database (but don't block if it fails)
+          // Payment successful - save to database
           try {
-            const { error } = await supabase.from('rentals').insert({
+            await supabase.from('rentals').insert({
               ticket_code: ticketCode,
               customer_name: formData.name,
               customer_phone: formData.phone,
@@ -92,36 +130,26 @@ export default function RentPage() {
               status: 'active',
               started_at: new Date().toISOString()
             });
-
-            if (error) {
-              console.error('Database error:', error.message);
-            }
           } catch (dbError) {
-            console.error('Failed to save rental:', dbError);
+            console.error('Database save failed:', dbError);
+            // Continue anyway - payment was successful
           }
 
-          // Always redirect to success page
+          // Redirect to success page
           setLoading(false);
-          setTimeout(() => {
-            router.push(`/rent/success?ref=${response.reference}&ticket=${ticketCode}`);
-          }, 300);
+          router.push(`/rent/success?ref=${response.reference}&ticket=${ticketCode}`);
         },
         onClose: function() {
-          alert('Payment window closed. Please try again.');
           setLoading(false);
+          alert('Payment window closed. Please try again.');
         }
       });
 
-      if (handler) {
-        handler.openIframe();
-      } else {
-        alert('Payment system is loading. Please try again in a moment.');
-        setLoading(false);
-      }
+      handler.openIframe();
     } catch (error) {
-      console.error('Payment error:', error);
-      alert('An error occurred. Please try again.');
+      console.error('Paystack error:', error);
       setLoading(false);
+      alert('Payment system error. Please refresh the page and try again.');
     }
   };
 
@@ -348,23 +376,24 @@ export default function RentPage() {
         borderTop: '1px solid #e2e8f0'
       }}>
         <button
+          type="submit"
           onClick={(e) => {
             const form = document.querySelector('form');
-            if (form) form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+            if (form) form.requestSubmit();
           }}
-          disabled={loading || !paystackScriptLoaded}
+          disabled={loading || !paystackReady}
           style={{
             width: '100%',
             maxWidth: '500px',
             padding: '18px 24px',
-            background: loading || !paystackScriptLoaded ? '#94a3b8' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            background: loading || !paystackReady ? '#94a3b8' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
             color: 'white',
             border: 'none',
             borderRadius: '14px',
             fontSize: '18px',
             fontWeight: '700',
-            cursor: loading || !paystackScriptLoaded ? 'not-allowed' : 'pointer',
-            boxShadow: loading || !paystackScriptLoaded ? 'none' : '0 6px 20px rgba(16, 185, 129, 0.4)',
+            cursor: loading || !paystackReady ? 'not-allowed' : 'pointer',
+            boxShadow: loading || !paystackReady ? 'none' : '0 6px 20px rgba(16, 185, 129, 0.4)',
           }}
         >
           {loading ? (
@@ -379,8 +408,8 @@ export default function RentPage() {
               }} />
               Processing...
             </span>
-          ) : !paystackScriptLoaded ? (
-            'Loading Payment...'
+          ) : !paystackReady ? (
+            '⏳ Loading Payment System...'
           ) : (
             <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
               Pay ₦{currentPrice} & Rent Now 
