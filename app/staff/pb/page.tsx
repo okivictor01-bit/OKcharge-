@@ -93,8 +93,7 @@ function PowerBankContent() {
         .update({ 
           status: 'active',
           power_bank_id: powerBank.id,
-          location_id: powerBank.location_id, // THIS IS THE FIX!
-          handed_over_at: new Date().toISOString()
+          location_id: powerBank.location_id // THIS LINKS IT TO THE DASHBOARD!
         })
         .eq('id', rental.id);
 
