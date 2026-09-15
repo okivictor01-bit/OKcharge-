@@ -12,6 +12,7 @@ export default function RentPage() {
   const [loading, setLoading] = useState(false);
   const [paystackReady, setPaystackReady] = useState(false);
   const [selectedDuration, setSelectedDuration] = useState("1");
+  const [paymentTimeout, setPaymentTimeout] = useState(false);
 
   const prices: Record<string, number> = { "1": 100, "3": 250, "5": 400, "24": 900 };
   const currentPrice = prices[duration] || 100;
@@ -45,13 +46,25 @@ export default function RentPage() {
     if (!paystackReady) { alert("Payment system is loading. Please wait."); return; }
 
     setLoading(true);
+    setPaymentTimeout(false);
+    
     const reference = `OKCHARGE_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const ticketCode = `TKT-${Math.floor(100000 + Math.random() * 900000)}`;
     const currentFormData = { ...formData };
     const currentPriceValue = currentPrice;
     const currentDuration = duration;
 
+    // Set a 5-minute timeout
+    const timeoutId = setTimeout(() => {
+      setPaymentTimeout(true);
+      setLoading(false);
+      alert(`Payment is taking longer than expected.\n\nReference: ${reference}\nTicket: ${ticketCode}\n\nIf you were charged, please contact support with this reference.`);
+    }, 300000); // 5 minutes
+
     function onPaymentSuccess(response: any) {
+      // Clear timeout
+      clearTimeout(timeoutId);
+      
       console.log("Payment successful:", response);
       console.log("Ticket code:", ticketCode);
       
@@ -75,11 +88,50 @@ export default function RentPage() {
           console.log("Rental created successfully:", data);
         }
         
-        // FORCE REDIRECT: Bypasses Next.js router caching issues on mobile
+        // FORCE REDIRECT with cache buster
         setLoading(false);
         const successUrl = `/rent/success?ref=${response.reference}&ticket=${ticketCode}&t=${Date.now()}`;
         window.location.replace(successUrl);
       });
+    }
+
+    function onPaymentClose() {
+      console.log("Payment window closed");
+      clearTimeout(timeoutId);
+      setLoading(false);
+      
+      // Check if payment might have succeeded but callback failed
+      const checkPayment = confirm(`Payment window closed.\n\nDid you complete the payment?\n\nReference: ${reference}\n\nClick OK to check status, or Cancel to try again.`);
+      
+      if (checkPayment) {
+        // Try to verify payment
+        verifyPayment(reference, ticketCode);
+      }
+    }
+
+    async function verifyPayment(ref: string, ticket: string) {
+      setLoading(true);
+      try {
+        // Check if rental exists in database
+        const { data, error } = await supabase
+          .from("rentals")
+          .select("*")
+          .eq("paystack_reference", ref)
+          .eq("ticket_code", ticket)
+          .single();
+
+        if (data && !error) {
+          // Payment was saved, redirect to success
+          window.location.replace(`/rent/success?ref=${ref}&ticket=${ticket}&t=${Date.now()}`);
+        } else {
+          alert("Payment verification failed. If you were charged, please contact support with reference: " + ref);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Verification error:", err);
+        alert("Could not verify payment. Please contact support with reference: " + ref);
+        setLoading(false);
+      }
     }
 
     try {
@@ -103,15 +155,13 @@ export default function RentPage() {
           ]
         },
         callback: onPaymentSuccess,
-        onClose: () => { 
-          console.log("Payment window closed");
-          setLoading(false); 
-        }
+        onClose: onPaymentClose
       });
 
       if (handler && typeof handler.openIframe === "function") handler.openIframe();
       else throw new Error("Handler error");
     } catch (error: any) {
+      clearTimeout(timeoutId);
       setLoading(false);
       alert("Payment error: " + error.message);
     }
