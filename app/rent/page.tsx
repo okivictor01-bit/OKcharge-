@@ -72,11 +72,13 @@ export default function RentPage() {
           console.error("Database error:", error);
           alert(`Payment successful but save failed: ${error.message}\nTicket: ${ticketCode}`);
         } else {
-          console.log("Rental created:", data);
+          console.log("Rental created successfully:", data);
         }
-        // Always redirect to success page, regardless of DB error
+        
+        // FORCE REDIRECT: Bypasses Next.js router caching issues on mobile
         setLoading(false);
-        window.location.href = `/rent/success?ref=${response.reference}&ticket=${ticketCode}`;
+        const successUrl = `/rent/success?ref=${response.reference}&ticket=${ticketCode}&t=${Date.now()}`;
+        window.location.replace(successUrl);
       });
     }
 
