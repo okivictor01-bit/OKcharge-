@@ -23,7 +23,6 @@ export default function OwnerDashboard() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // Bank editing states
   const [isEditingBank, setIsEditingBank] = useState(false);
   const [tempBankCode, setTempBankCode] = useState('');
   const [tempAccountNumber, setTempAccountNumber] = useState('');
@@ -31,33 +30,17 @@ export default function OwnerDashboard() {
   const [bankMessage, setBankMessage] = useState('');
 
   const [timeLeft, setTimeLeft] = useState<Record<string, { h: number; m: number; s: number; overdue: boolean }>>({});
-  
-  // NEW: Dark Mode State (Default to true for cafe/restaurant environments)
   const [isDarkMode, setIsDarkMode] = useState(true);
 
   const banks = [
-    { code: '044', name: 'Access Bank' },
-    { code: '058', name: 'GTBank' },
-    { code: '011', name: 'First Bank' },
-    { code: '033', name: 'UBA' },
-    { code: '057', name: 'Zenith Bank' },
-    { code: '070', name: 'Fidelity Bank' },
-    { code: '032', name: 'Union Bank' },
-    { code: '232', name: 'Sterling Bank' },
-    { code: '090267', name: 'Opay' }, 
-    { code: '999992', name: 'Opay Digital' }, 
-    { code: '090288', name: 'PalmPay' },
-    { code: '50211', name: 'Kuda Bank' }, 
-    { code: '082', name: 'Keystone Bank' },
-    { code: '050', name: 'Ecobank' },
-    { code: '076', name: 'Polaris Bank' },
-    { code: '214', name: 'FCMB' },
-    { code: '030', name: 'Heritage Bank' },
-    { code: '035', name: 'Wema Bank' },
-    { code: '101', name: 'Providus Bank' },
+    { code: '044', name: 'Access Bank' }, { code: '058', name: 'GTBank' }, { code: '011', name: 'First Bank' },
+    { code: '033', name: 'UBA' }, { code: '057', name: 'Zenith Bank' }, { code: '070', name: 'Fidelity Bank' },
+    { code: '032', name: 'Union Bank' }, { code: '232', name: 'Sterling Bank' }, { code: '090267', name: 'Opay' }, 
+    { code: '999992', name: 'Opay Digital' }, { code: '090288', name: 'PalmPay' }, { code: '50211', name: 'Kuda Bank' }, 
+    { code: '082', name: 'Keystone Bank' }, { code: '050', name: 'Ecobank' }, { code: '076', name: 'Polaris Bank' },
+    { code: '214', name: 'FCMB' }, { code: '030', name: 'Heritage Bank' }, { code: '035', name: 'Wema Bank' }, { code: '101', name: 'Providus Bank' },
   ];
 
-  // Theme Colors
   const theme = {
     bg: isDarkMode ? '#0f172a' : '#f8fafc',
     cardBg: isDarkMode ? '#1e293b' : '#ffffff',
@@ -138,12 +121,8 @@ export default function OwnerDashboard() {
     
     filtered.forEach((tx: any) => { 
       periodRevenue += tx.amount_paid || 0;
-      if (tx.owner_amount !== undefined && tx.owner_amount !== null) {
-        periodOwnerShare += Number(tx.owner_amount);
-      } else {
-        const split = tx.power_bank_ownership_type === 'owner' ? 75 : (owner?.revenue_share_percentage || 40);
-        periodOwnerShare += (tx.amount_paid || 0) * (split / 100);
-      }
+      // UPDATED: Hardcoded 50% split calculation
+      periodOwnerShare += (tx.amount_paid || 0) * 0.50; 
     });
     
     setPeriodStats({ revenue: periodRevenue, share: periodOwnerShare });
@@ -175,7 +154,7 @@ export default function OwnerDashboard() {
           business_name: owner.business_name, 
           bank_code: tempBankCode, 
           account_number: tempAccountNumber, 
-          percentage: owner.revenue_share_percentage 
+          percentage: 50 // UPDATED: Hardcoded 50% for Paystack
         })
       });
       const data = await res.json();
@@ -188,8 +167,7 @@ export default function OwnerDashboard() {
         isSuccess = true;
         setBankMessage('✅ Bank verified & linked to Paystack!');
       } else {
-        console.warn("Paystack verification failed:", data);
-        setBankMessage('⚠️ Bank details saved locally. Paystack verification pending (manual review may be required).');
+        setBankMessage('⚠️ Bank details saved locally. Paystack verification pending.');
         isSuccess = true;
       }
 
@@ -200,36 +178,19 @@ export default function OwnerDashboard() {
       }).eq('id', owner.id);
       
       if (!error && isSuccess) {
-        setOwner((prev: any) => ({ 
-          ...prev, 
-          bank_name: banks.find(b=>b.code===tempBankCode)?.name, 
-          account_number: tempAccountNumber, 
-          paystack_subaccount_code: subaccountCode 
-        }));
+        setOwner((prev: any) => ({ ...prev, bank_name: banks.find(b=>b.code===tempBankCode)?.name, account_number: tempAccountNumber, paystack_subaccount_code: subaccountCode }));
         setIsEditingBank(false);
       } else if (error) {
-        setBankMessage('❌ Database error: ' + error.message);
+        setBankMessage(' Database error: ' + error.message);
       }
-    } catch (err: any) { 
-      setBankMessage(' Network error: ' + err.message); 
-    }
+    } catch (err: any) { setBankMessage(' Network error: ' + err.message); }
     setBankSaving(false);
   };
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('en-NG', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
   const getFilterLabel = () => filterType==='today'?"Today's Earnings":filterType==='date'?`Earnings for ${singleDate}`:`Earnings (${startDate} to ${endDate})`;
   
-  const inputStyle: React.CSSProperties = { 
-    width: '100%', 
-    padding: '12px', 
-    marginBottom: '15px', 
-    border: `1px solid ${theme.border}`, 
-    borderRadius: '8px', 
-    fontSize: '16px', 
-    boxSizing: 'border-box',
-    backgroundColor: theme.inputBg,
-    color: theme.textMain
-  };
+  const inputStyle: React.CSSProperties = { width: '100%', padding: '12px', marginBottom: '15px', border: `1px solid ${theme.border}`, borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box', backgroundColor: theme.inputBg, color: theme.textMain };
 
   if (loading) return <main style={{padding:'20px',textAlign:'center', backgroundColor: theme.bg, minHeight: '100vh', color: theme.textMain}}>Loading...</main>;
   if (!owner) return <main style={{padding:'20px',textAlign:'center', backgroundColor: theme.bg, minHeight: '100vh', color: theme.textMain}}><h2>Profile not found.</h2><button onClick={handleLogout} style={{padding:'10px 20px', backgroundColor:'#ef4444', color:'white', border:'none', borderRadius:'6px', cursor:'pointer'}}>Logout</button></main>;
@@ -237,15 +198,11 @@ export default function OwnerDashboard() {
   return (
     <main style={{padding:'20px',fontFamily:'sans-serif',maxWidth:'600px',margin:'0 auto', backgroundColor: theme.bg, minHeight: '100vh', color: theme.textMain, transition: 'background-color 0.3s, color 0.3s'}}>
       
-      {/* Header */}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'20px'}}>
         <div>
           <h1 style={{fontSize:'22px',margin:0, fontWeight: '800'}}>Partner Dashboard</h1>
-          <button 
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            style={{ marginTop: '5px', padding: '6px 12px', backgroundColor: theme.cardBg, color: theme.textMain, border: `1px solid ${theme.border}`, borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}
-          >
-            {isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
+          <button onClick={() => setIsDarkMode(!isDarkMode)} style={{ marginTop: '5px', padding: '6px 12px', backgroundColor: theme.cardBg, color: theme.textMain, border: `1px solid ${theme.border}`, borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>
+            {isDarkMode ? '☀️ Light Mode' : ' Dark Mode'}
           </button>
         </div>
         <button onClick={handleLogout} style={{padding:'8px 15px',backgroundColor:'#ef4444',color:'white',border:'none',borderRadius:'6px',fontWeight:'bold', cursor: 'pointer'}}>Logout</button>
@@ -270,7 +227,7 @@ export default function OwnerDashboard() {
       {/* Revenue Card */}
       <div style={{backgroundColor:'#10b981',padding:'25px',borderRadius:'12px',marginBottom:'25px',color:'white',textAlign:'center', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)'}}>
         <p style={{margin:'0 0 10px',fontSize:'14px',opacity:0.9, fontWeight: '600'}}>{getFilterLabel()}</p>
-        <p style={{margin:'0 0 5px',fontSize:'12px',opacity:0.9}}>Your Total Earnings</p>
+        <p style={{margin:'0 0 5px',fontSize:'12px',opacity:0.9}}>Your Total Earnings (50% Share)</p>
         <h2 style={{margin:'0 0 10px',fontSize:'36px',fontWeight:'bold'}}>₦{periodStats.share.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</h2>
         <p style={{margin:0,fontSize:'14px',opacity:0.9}}>Total Location Revenue: ₦{periodStats.revenue.toLocaleString()}</p>
       </div>
@@ -284,7 +241,6 @@ export default function OwnerDashboard() {
           <div>
             <p style={{margin:'5px 0',fontSize:'14px',color: theme.textMuted}}><strong style={{color: theme.textMain}}>Bank:</strong> {owner.bank_name || 'Not set'}</p>
             <p style={{margin:'5px 0',fontSize:'14px',color: theme.textMuted}}><strong style={{color: theme.textMain}}>Account:</strong> {owner.account_number ? `****${owner.account_number.slice(-4)}` : 'Not set'}</p>
-            <p style={{margin:'5px 0',fontSize:'12px',color: theme.textMuted}}>Subaccount Code: {owner.paystack_subaccount_code ? `${owner.paystack_subaccount_code.slice(0,8)}...` : 'Not created yet'}</p>
             <button onClick={()=>setIsEditingBank(true)} style={{marginTop:'15px',padding:'10px 20px',backgroundColor:'#2563eb',color:'white',border:'none',borderRadius:'6px',fontWeight:'bold',cursor:'pointer'}}>✏️ Update Bank Details</button>
           </div>
         ) : (
@@ -328,8 +284,8 @@ export default function OwnerDashboard() {
         <div style={{padding:'30px',backgroundColor: theme.cardBg, borderRadius:'8px', textAlign:'center', color: theme.textMuted, border: `1px solid ${theme.border}`}}>No transactions found for this period.</div>
       ) : (
         filteredTransactions.map(tx=>{
-          const split = tx.revenue_split_owner || (tx.power_bank_ownership_type === 'owner' ? 75 : (owner?.revenue_share_percentage || 40));
-          const ownerEarned = tx.owner_amount !== undefined ? Number(tx.owner_amount) : (tx.amount_paid || 0) * (split / 100);
+          // UPDATED: Hardcoded 50% split for display
+          const ownerEarned = (tx.amount_paid || 0) * 0.50;
           
           return (
             <div key={tx.id} style={{padding:'15px',backgroundColor: theme.cardBg, border:`1px solid ${theme.border}`, borderRadius:'8px', marginBottom:'10px', display:'flex', flexDirection:'column', gap:'10px', boxShadow: isDarkMode ? '0 4px 6px rgba(0,0,0,0.3)' : '0 2px 4px rgba(0,0,0,0.05)'}}>
@@ -344,9 +300,8 @@ export default function OwnerDashboard() {
                 </div>
               </div>
               
-              {/* Revenue Split Breakdown */}
               <div style={{marginTop:'5px',paddingTop:'10px',borderTop:`1px dashed ${theme.border}`,fontSize:'13px',color: theme.textMuted, display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                <span>Your Share ({split}%):</span>
+                <span>Your Share (50%):</span>
                 <span style={{fontWeight:'bold',color: theme.textMain, fontSize:'15px'}}>₦{ownerEarned.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
               </div>
             </div>
