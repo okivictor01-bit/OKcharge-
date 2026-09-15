@@ -80,7 +80,6 @@ export default function RentPage() {
     const currentFormData = { ...formData };
     const currentPriceValue = currentPrice;
 
-    // Define the callback function
     const paymentCallback = function(response: any) {
       console.log('Payment successful:', response);
       
@@ -92,17 +91,21 @@ export default function RentPage() {
         duration_hours: parseInt(currentDuration),
         amount_paid: currentPriceValue,
         payment_reference: response.reference,
-        status: 'active',
-        started_at: new Date().toISOString()
+        status: 'paid',
+        payment_status: 'paid',
+        started_at: new Date().toISOString(),
+        created_at: new Date().toISOString()
       }).then(({ error }) => {
-        if (error) console.error('Database error:', error);
+        if (error) {
+          console.error('Database error:', error);
+          alert('Payment successful but there was an issue saving your rental. Please contact support with ticket: ' + ticketCode);
+        }
         
         setLoading(false);
         router.push(`/rent/success?ref=${response.reference}&ticket=${ticketCode}`);
       });
     };
 
-    // Define the close callback
     const closeCallback = function() {
       console.log('Payment window closed');
       setLoading(false);
@@ -158,7 +161,7 @@ export default function RentPage() {
         borderBottomRightRadius: '30px',
         boxShadow: '0 10px 40px rgba(15, 23, 42, 0.3)'
       }}>
-        <div style={{ fontSize: '40px', marginBottom: '10px' }}>🔋</div>
+        <div style={{ fontSize: '40px', marginBottom: '10px' }}></div>
         <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '700', letterSpacing: '-0.5px' }}>Complete Your Rental</h1>
       </div>
 
@@ -377,7 +380,7 @@ export default function RentPage() {
                 Processing...
               </span>
             ) : !paystackReady ? (
-              ' Loading Payment System...'
+              '⏳ Loading Payment System...'
             ) : (
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                 Pay ₦{currentPrice} & Rent Now 
