@@ -2,8 +2,9 @@
 
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { Suspense } from 'react';
 
-export default function RentSuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const reference = searchParams.get('ref');
   const ticket = searchParams.get('ticket');
@@ -115,5 +116,17 @@ export default function RentSuccessPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function RentSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: 'sans-serif' }}>
+        Loading your ticket...
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   );
 }
