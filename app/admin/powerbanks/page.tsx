@@ -2,217 +2,229 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
-export default function AdminPowerBanks() {
+export default function ManagePowerBanks() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const locationFilter = searchParams.get('location');
-  
-  const [powerBanks, setPowerBanks] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
+  const [powerBanks, setPowerBanks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newPB, setNewPB] = useState({
-    pb_code: '',
-    location_id: '',
-    ownership_type: 'okcharge' as 'okcharge' | 'owner'
-  });
+  const [newPB, setNewPB] = useState({ code: '', location_id: '', ownership_type: 'okcharge' });
+  const [message, setMessage] = useState('');
 
-  useEffect(() => { 
+  useEffect(() => {
     fetchLocations();
-    fetchPowerBanks(); 
-  }, [locationFilter]);
+    fetchPowerBanks();
+  }, []);
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('id, name').eq('status', 'active');
-    if (data) setLocations(data);
+    const { data, error } = await supabase
+      .from('locations')
+      .select('id, name, owner_id')
+      .eq('status', 'active')
+      .order('name');
+    if (!error) setLocations(data || []);
   };
 
   const fetchPowerBanks = async () => {
     setLoading(true);
-    let query = supabase.from('power_banks').select('*, locations(name)').order('created_at', { ascending: false });
-    
-    if (locationFilter) {
-      query = query.eq('location_id', locationFilter);
-    }
-
-    const { data, error } = await query;
+    const { data, error } = await supabase
+      .from('power_banks')
+      .select('*, locations(name)')
+      .order('created_at', { ascending: false });
     if (!error) setPowerBanks(data || []);
     setLoading(false);
   };
 
   const handleAddPowerBank = async (e: any) => {
     e.preventDefault();
-    
-    if (!newPB.pb_code || !newPB.location_id) {
-      alert('Please fill in all required fields');
-      return;
-    }
+    setMessage('');
 
-    const { error } = await supabase.from('power_banks').insert([{
-      pb_code: newPB.pb_code.toUpperCase(),
-      location_id: newPB.location_id,
-      ownership_type: newPB.ownership_type,
-      status: 'available',
-      created_at: new Date().toISOString()
-    }]);
-
-    if (!error) {
-      alert('Power bank added successfully!');
-      setNewPB({ pb_code: '', location_id: '', ownership_type: 'okcharge' });
-      setShowAddForm(false);
-      fetchPowerBanks();
-    } else {
-      alert('Error: ' + error.message);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('⚠️ Are you sure you want to permanently delete this power bank? This action cannot be undone.')) {
+    if (!newPB.code || !newPB.location_id) {
+      setMessage('❌ Please fill all required fields');
       return;
     }
 
     try {
-      const { data: activeRentals, error: checkError } = await supabase
-        .from('rentals')
-        .select('id, status')
-        .eq('power_bank_id', id)
-        .eq('status', 'active');
+      const { error } = await supabase.from('power_banks').insert({
+        pb_code: newPB.code.toUpperCase(),
+        location_id: newPB.location_id,
+        ownership_type: newPB.ownership_type,
+        status: 'available'
+      });
 
-      if (checkError) {
-        console.error('Error checking rentals:', checkError);
-      }
+      if (error) throw error;
 
-      if (activeRentals && activeRentals.length > 0) {
-        alert('❌ Cannot delete! This power bank has active rentals. Please return it first or mark the rental as completed.');
-        return;
-      }
+      setMessage('✅ Power bank added successfully!');
+      setNewPB({ code: '', location_id: '', ownership_type: 'okcharge' });
+      setShowAddForm(false);
+      fetchPowerBanks();
+    } catch (error: any) {
+      setMessage('❌ Error: ' + error.message);
+    }
+  };
 
+  const handleUpdateStatus = async (pbId: string, newStatus: string) => {
+    try {
       const { error } = await supabase
         .from('power_banks')
-        .delete()
-        .eq('id', id);
-      
-      if (error) {
-        console.error('Delete error details:', error);
-        alert('❌ Error deleting power bank:\n\n' + error.message);
-      } else {
-        alert('✅ Power bank deleted successfully!');
-        fetchPowerBanks();
-      }
-    } catch (err: any) {
-      console.error('Delete error:', err);
-      alert('❌ Unexpected error: ' + err.message);
-    }
-  };
+        .update({ status: newStatus })
+        .eq('id', pbId);
 
-  const handleStatusChange = async (id: string, newStatus: string) => {
-    const { error } = await supabase
-      .from('power_banks')
-      .update({ status: newStatus })
-      .eq('id', id);
-    
-    if (!error) {
+      if (error) throw error;
       fetchPowerBanks();
-    } else {
-      alert('Error updating status: ' + error.message);
+    } catch (error: any) {
+      alert('❌ Error updating status: ' + error.message);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch(status) {
-      case 'available': return { bg: '#dcfce7', text: '#15803d', label: '✓ Available' };
-      case 'rented': return { bg: '#dbeafe', text: '#1d4ed8', label: '🔵 Rented' };
-      case 'damaged': return { bg: '#fee2e2', text: '#b91c1c', label: '⚠️ Damaged' };
-      case 'lost': return { bg: '#fef3c7', text: '#92400e', label: '🚨 Lost' };
-      default: return { bg: '#f1f5f9', text: '#64748b', label: status };
+  const handleDeletePowerBank = async (pbId: string) => {
+    if (!window.confirm('Are you sure you want to delete this power bank?')) return;
+
+    try {
+      const { error } = await supabase.from('power_banks').delete().eq('id', pbId);
+      if (error) throw error;
+      fetchPowerBanks();
+    } catch (error: any) {
+      alert('❌ Error: ' + error.message);
     }
   };
 
-  const getOwnershipBadge = (type: string) => {
-    if (type === 'owner') {
-      return { bg: '#fef3c7', text: '#92400e', label: 'Owner (75/25)' };
-    }
-    return { bg: '#dbeafe', text: '#1e40af', label: 'OKcharge (40/60)' };
+  const generateQRCode = (pbCode: string) => {
+    const qrData = `${window.location.origin}/staff/pb?code=${pbCode}`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`;
   };
 
-  if (loading) return <main style={{ padding: '20px', textAlign: 'center' }}>Loading power banks...</main>;
-
-  const inputStyle = {
-    width: '100%',
-    padding: '12px',
-    marginBottom: '15px',
-    border: '1px solid #ddd',
-    borderRadius: '8px',
-    fontSize: '16px',
-    boxSizing: 'border-box' as const
-  };
+  if (loading) return <main style={{ padding: '20px', textAlign: 'center' }}>Loading...</main>;
 
   return (
-    <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '800px', margin: '0 auto' }}>
+    <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '900px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <h1 style={{ fontSize: '24px', margin: 0 }}>Manage Power Banks ({powerBanks.length})</h1>
-        <button 
+        <button
           onClick={() => setShowAddForm(!showAddForm)}
-          style={{ backgroundColor: '#2563eb', color: 'white', padding: '10px 15px', borderRadius: '8px', border: 'none', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: showAddForm ? '#ef4444' : '#2563eb',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            fontWeight: 'bold',
+            cursor: 'pointer'
+          }}
         >
           {showAddForm ? 'Cancel' : '+ Add New'}
         </button>
       </div>
 
-      {locationFilter && (
-        <div style={{ backgroundColor: '#eff6ff', padding: '10px 15px', borderRadius: '8px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ color: '#1e40af', fontWeight: 'bold' }}>Filtering by Location ID: {locationFilter}</span>
-          <button onClick={() => router.push('/admin/powerbanks')} style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontWeight: 'bold' }}>Clear Filter</button>
+      {message && (
+        <div style={{
+          padding: '15px',
+          borderRadius: '8px',
+          marginBottom: '20px',
+          backgroundColor: message.includes('✅') ? '#dcfce7' : '#fee2e2',
+          color: message.includes('✅') ? '#15803d' : '#b91c1c'
+        }}>
+          {message}
         </div>
       )}
 
+      {/* Add New Power Bank Form */}
       {showAddForm && (
-        <div style={{ backgroundColor: '#f0f9ff', padding: '25px', borderRadius: '12px', border: '2px solid #bae6fd', marginBottom: '25px' }}>
-          <h2 style={{ margin: '0 0 20px 0', fontSize: '20px', color: '#0369a1' }}>Add New Power Bank</h2>
+        <div style={{
+          backgroundColor: '#f0f9ff',
+          padding: '25px',
+          borderRadius: '12px',
+          border: '2px solid #bae6fd',
+          marginBottom: '25px'
+        }}>
+          <h2 style={{ margin: '0 0 20px 0', color: '#0369a1', fontSize: '20px' }}>Add New Power Bank</h2>
           <form onSubmit={handleAddPowerBank}>
-            <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Power Bank Code *</label>
-            <input 
-              style={inputStyle}
-              type="text"
-              placeholder="e.g., OKAK001"
-              value={newPB.pb_code}
-              onChange={(e) => setNewPB({...newPB, pb_code: e.target.value})}
-              required
-            />
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#0f172a' }}>
+                Power Bank Code *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g., OKAK001"
+                value={newPB.code}
+                onChange={(e) => setNewPB({ ...newPB, code: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  boxSizing: 'border-box'
+                }}
+                required
+              />
+            </div>
 
-            <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Assign to Location *</label>
-            <select 
-              style={inputStyle}
-              value={newPB.location_id}
-              onChange={(e) => setNewPB({...newPB, location_id: e.target.value})}
-              required
-            >
-              <option value="">Select Location</option>
-              {locations.map(loc => (
-                <option key={loc.id} value={loc.id}>{loc.name}</option>
-              ))}
-            </select>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#0f172a' }}>
+                Assign to Location *
+              </label>
+              <select
+                value={newPB.location_id}
+                onChange={(e) => setNewPB({ ...newPB, location_id: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  boxSizing: 'border-box'
+                }}
+                required
+              >
+                <option value="">Select Location</option>
+                {locations.map(loc => (
+                  <option key={loc.id} value={loc.id}>{loc.name}</option>
+                ))}
+              </select>
+            </div>
 
-            <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Ownership Type *</label>
-            <select 
-              style={inputStyle}
-              value={newPB.ownership_type}
-              onChange={(e) => setNewPB({...newPB, ownership_type: e.target.value as 'okcharge' | 'owner'})}
-              required
-            >
-              <option value="okcharge">OKcharge Owned (40% Owner / 60% Platform)</option>
-              <option value="owner">Owner Owned (75% Owner / 25% Platform)</option>
-            </select>
-            <p style={{ fontSize: '13px', color: '#64748b', marginTop: '-10px', marginBottom: '20px' }}>
-              • OKcharge Owned: Platform provides the hardware<br/>
-              • Owner Owned: Location partner provides their own power banks
-            </p>
+            {/* UPDATED: Ownership Type - Now 50/50 Standard */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#0f172a' }}>
+                Ownership Type *
+              </label>
+              <select
+                value={newPB.ownership_type}
+                onChange={(e) => setNewPB({ ...newPB, ownership_type: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  boxSizing: 'border-box',
+                  backgroundColor: '#f0fdf4'
+                }}
+              >
+                <option value="okcharge">OKcharge Owned (50% Owner / 50% Platform)</option>
+              </select>
+              <p style={{ fontSize: '13px', color: '#64748b', marginTop: '8px', margin: '8px 0 0 0' }}>
+                • OKcharge Owned: Platform provides the hardware<br/>
+                • Revenue split: 50% to Location Owner, 50% to OKcharge
+              </p>
+            </div>
 
-            <button 
+            <button
               type="submit"
-              style={{ width: '100%', padding: '15px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}
+              style={{
+                width: '100%',
+                padding: '14px',
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
             >
               Add Power Bank
             </button>
@@ -220,128 +232,155 @@ export default function AdminPowerBanks() {
         </div>
       )}
 
-      {powerBanks.length === 0 ? (
-        <p style={{ textAlign: 'center', color: '#64748b' }}>No power banks found.</p>
-      ) : (
-        <div style={{ display: 'grid', gap: '15px' }}>
-          {powerBanks.map((pb) => {
-            const statusInfo = getStatusColor(pb.status);
-            const ownershipInfo = getOwnershipBadge(pb.ownership_type || 'okcharge');
-            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://okcharge.pages.dev/staff/pb?code=${pb.pb_code}`;
-            
-            return (
-              <div key={pb.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{ margin: '0 0 5px 0', fontSize: '18px', color: '#0f172a', fontFamily: 'monospace' }}>{pb.pb_code}</h3>
-                    <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>📍 {pb.locations?.name || 'Unassigned'}</p>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px', flexDirection: 'column', alignItems: 'flex-end' }}>
-                    <span style={{ 
-                      padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold',
-                      backgroundColor: statusInfo.bg,
-                      color: statusInfo.text
-                    }}>
-                      {statusInfo.label}
-                    </span>
-                    <span style={{ 
-                      padding: '4px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold',
-                      backgroundColor: ownershipInfo.bg,
-                      color: ownershipInfo.text,
-                      marginTop: '5px'
-                    }}>
-                      {ownershipInfo.label}
-                    </span>
-                  </div>
-                </div>
-
-                {/* QR Code for Power Bank */}
-                <div style={{ 
-                  backgroundColor: '#f8fafc', 
-                  padding: '15px', 
-                  borderRadius: '8px', 
-                  marginBottom: '15px', 
-                  textAlign: 'center',
-                  border: '2px dashed #cbd5e1'
-                }}>
-                  <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#64748b', fontWeight: 'bold' }}>📱 Power Bank QR Code</p>
-                  <img 
-                    src={qrUrl} 
-                    alt={`QR Code for ${pb.pb_code}`}
-                    style={{ width: '150px', height: '150px' }}
-                  />
-                  <p style={{ margin: '10px 0 0 0', fontSize: '11px', color: '#94a3b8' }}>
-                    Scan to manage this power bank
-                  </p>
-                </div>
-                
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '15px' }}>
-                  <button 
-                    onClick={() => handleStatusChange(pb.id, 'available')}
-                    disabled={pb.status === 'available'}
-                    style={{ 
-                      padding: '6px 12px', borderRadius: '6px', border: '1px solid #10b981', 
-                      backgroundColor: pb.status === 'available' ? '#10b981' : 'white',
-                      color: pb.status === 'available' ? 'white' : '#10b981',
-                      fontSize: '12px', fontWeight: 'bold', cursor: 'pointer'
-                    }}
-                  >
-                    ✓ Available
-                  </button>
-                  <button 
-                    onClick={() => handleStatusChange(pb.id, 'rented')}
-                    disabled={pb.status === 'rented'}
-                    style={{ 
-                      padding: '6px 12px', borderRadius: '6px', border: '1px solid #3b82f6', 
-                      backgroundColor: pb.status === 'rented' ? '#3b82f6' : 'white',
-                      color: pb.status === 'rented' ? 'white' : '#3b82f6',
-                      fontSize: '12px', fontWeight: 'bold', cursor: 'pointer'
-                    }}
-                  >
-                     Rented
-                  </button>
-                  <button 
-                    onClick={() => handleStatusChange(pb.id, 'damaged')}
-                    disabled={pb.status === 'damaged'}
-                    style={{ 
-                      padding: '6px 12px', borderRadius: '6px', border: '1px solid #ef4444', 
-                      backgroundColor: pb.status === 'damaged' ? '#ef4444' : 'white',
-                      color: pb.status === 'damaged' ? 'white' : '#ef4444',
-                      fontSize: '12px', fontWeight: 'bold', cursor: 'pointer'
-                    }}
-                  >
-                    ⚠️ Damaged
-                  </button>
-                  <button 
-                    onClick={() => handleStatusChange(pb.id, 'lost')}
-                    disabled={pb.status === 'lost'}
-                    style={{ 
-                      padding: '6px 12px', borderRadius: '6px', border: '1px solid #f59e0b', 
-                      backgroundColor: pb.status === 'lost' ? '#f59e0b' : 'white',
-                      color: pb.status === 'lost' ? 'white' : '#f59e0b',
-                      fontSize: '12px', fontWeight: 'bold', cursor: 'pointer'
-                    }}
-                  >
-                    🚨 Lost
-                  </button>
-                </div>
-
-                <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '15px', textAlign: 'right' }}>
-                  <button 
-                    onClick={() => handleDelete(pb.id)}
-                    style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', backgroundColor: '#ef4444', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}
-                  >
-                    🗑 Delete
-                  </button>
-                </div>
+      {/* Power Banks List */}
+      <div style={{ display: 'grid', gap: '20px' }}>
+        {powerBanks.map((pb) => (
+          <div key={pb.id} style={{
+            backgroundColor: 'white',
+            padding: '25px',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
+              <div>
+                <h3 style={{ margin: '0 0 5px 0', fontSize: '20px', color: '#0f172a' }}>{pb.pb_code}</h3>
+                <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#64748b' }}>
+                  📍 {pb.locations?.name || 'Unassigned'}
+                </p>
               </div>
-            );
-          })}
-        </div>
-      )}
-      
-      <div style={{ marginTop: '30px', textAlign: 'center' }}>
-        <a href="/admin/locations" style={{ color: '#2563eb', textDecoration: 'none' }}>← Back to Locations</a>
+              <div style={{ textAlign: 'right' }}>
+                <span style={{
+                  display: 'inline-block',
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  fontSize: '13px',
+                  fontWeight: 'bold',
+                  backgroundColor: pb.status === 'available' ? '#dcfce7' :
+                    pb.status === 'rented' ? '#dbeafe' :
+                      pb.status === 'damaged' ? '#fee2e2' : '#fef3c7',
+                  color: pb.status === 'available' ? '#15803d' :
+                    pb.status === 'rented' ? '#1d4ed8' :
+                      pb.status === 'damaged' ? '#b91c1c' : '#92400e'
+                }}>
+                  ✓ {pb.status?.charAt(0).toUpperCase() + pb.status?.slice(1)}
+                </span>
+                <br />
+                {/* UPDATED: Badge shows 50/50 */}
+                <span style={{
+                  display: 'inline-block',
+                  marginTop: '8px',
+                  padding: '4px 10px',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  backgroundColor: '#dbeafe',
+                  color: '#1e40af'
+                }}>
+                  50/50 Partnership
+                </span>
+              </div>
+            </div>
+
+            {/* QR Code */}
+            <div style={{
+              padding: '20px',
+              backgroundColor: '#f8fafc',
+              borderRadius: '8px',
+              border: '2px dashed #cbd5e1',
+              textAlign: 'center',
+              marginBottom: '15px'
+            }}>
+              <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#64748b', fontWeight: 'bold' }}>
+                📱 Power Bank QR Code
+              </p>
+              <img
+                src={generateQRCode(pb.pb_code)}
+                alt="QR Code"
+                style={{ width: '200px', height: '200px' }}
+              />
+              <p style={{ margin: '10px 0 0 0', fontSize: '12px', color: '#94a3b8' }}>
+                Scan to manage this power bank
+              </p>
+            </div>
+
+            {/* Status Buttons */}
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '15px' }}>
+              <button
+                onClick={() => handleUpdateStatus(pb.id, 'available')}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: pb.status === 'available' ? '#10b981' : 'white',
+                  color: pb.status === 'available' ? 'white' : '#10b981',
+                  border: '2px solid #10b981',
+                  borderRadius: '6px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                ✓ Available
+              </button>
+              <button
+                onClick={() => handleUpdateStatus(pb.id, 'rented')}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: pb.status === 'rented' ? '#3b82f6' : 'white',
+                  color: pb.status === 'rented' ? 'white' : '#3b82f6',
+                  border: '2px solid #3b82f6',
+                  borderRadius: '6px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                Rented
+              </button>
+              <button
+                onClick={() => handleUpdateStatus(pb.id, 'damaged')}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: pb.status === 'damaged' ? '#ef4444' : 'white',
+                  color: pb.status === 'damaged' ? 'white' : '#ef4444',
+                  border: '2px solid #ef4444',
+                  borderRadius: '6px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                ⚠️ Damaged
+              </button>
+              <button
+                onClick={() => handleUpdateStatus(pb.id, 'lost')}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: pb.status === 'lost' ? '#f59e0b' : 'white',
+                  color: pb.status === 'lost' ? 'white' : '#f59e0b',
+                  border: '2px solid #f59e0b',
+                  borderRadius: '6px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                🔔 Lost
+              </button>
+            </div>
+
+            {/* Delete Button */}
+            <button
+              onClick={() => handleDeletePowerBank(pb.id)}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              🗑️ Delete Power Bank
+            </button>
+          </div>
+        ))}
       </div>
     </main>
   );
