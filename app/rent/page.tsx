@@ -50,9 +50,11 @@ export default function RentPage() {
     const currentFormData = { ...formData };
     const currentPriceValue = currentPrice;
     const currentDuration = duration;
-    const currentRouter = router;
 
     function onPaymentSuccess(response: any) {
+      console.log("Payment successful:", response);
+      console.log("Ticket code:", ticketCode);
+      
       supabase.from("rentals").insert({
         ticket_code: ticketCode,
         customer_name: currentFormData.name,
@@ -67,12 +69,21 @@ export default function RentPage() {
         power_bank_ownership_type: "okcharge"
       }).select().single().then(({ data, error }) => {
         if (error) {
+          console.error("Database error:", error);
           alert(`Payment successful but save failed: ${error.message}\nTicket: ${ticketCode}`);
           setLoading(false);
+          // Still redirect to success page even if DB fails
+          window.location.href = `/rent/success?ref=${response.reference}&ticket=${ticketCode}`;
           return;
         }
+        console.log("Rental created:", data);
         setLoading(false);
-        currentRouter.push(`/rent/success?ref=${response.reference}&ticket=${ticketCode}`);
+        // Use window.location for more reliable redirect
+        window.location.href = `/rent/success?ref=${response.reference}&ticket=${ticketCode}`;
+      }).catch((err) => {
+        console.error("Unexpected error:", err);
+        setLoading(false);
+        window.location.href = `/rent/success?ref=${response.reference}&ticket=${ticketCode}`;
       });
     }
 
@@ -97,7 +108,10 @@ export default function RentPage() {
           ]
         },
         callback: onPaymentSuccess,
-        onClose: () => { setLoading(false); }
+        onClose: () => { 
+          console.log("Payment window closed");
+          setLoading(false); 
+        }
       });
 
       if (handler && typeof handler.openIframe === "function") handler.openIframe();
@@ -123,7 +137,7 @@ export default function RentPage() {
               <button key={time} onClick={() => { setDuration(time); setSelectedDuration(time); }}
                 style={{ padding: "20px 15px", borderRadius: "16px", border: selectedDuration === time ? "2px solid #10b981" : "2px solid #e2e8f0", backgroundColor: selectedDuration === time ? "#ecfdf5" : "white", cursor: "pointer" }}>
                 <div style={{ fontWeight: "700", color: selectedDuration === time ? "#0f172a" : "#64748b", fontSize: "17px", marginBottom: "5px" }}>{time} Hour{time !== "1" ? "s" : ""}</div>
-                <div style={{ color: selectedDuration === time ? "#10b981" : "#94a3b8", fontWeight: "800", fontSize: "18px" }}>₦{price}</div>
+                <div style={{ color: selectedDuration === time ? "#10b981" : "#94a3b8", fontWeight: "800", fontSize: "18px" }}>{price}</div>
               </button>
             ))}
           </div>
