@@ -41,7 +41,7 @@ export default function RentPage() {
     setSelectedDuration(time);
   };
 
-  const handleCheckout = (e: any) => {
+  const handleCheckout = async (e: any) => {
     e.preventDefault();
     
     if (!agreeTerms) {
@@ -59,66 +59,68 @@ export default function RentPage() {
     const reference = `OKCHARGE_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const ticketCode = `TKT-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    const handler = (window as any).PaystackPop?.setup({
-      key: 'pk_live_9dd06423b57f6a6f6927e3ea2e28a101baa01fba',
-      email: formData.email || formData.phone + '@okcharge.local',
-      amount: currentPrice * 100,
-      currency: 'NGN',
-      ref: reference,
-      firstname: formData.name.split(' ')[0],
-      lastname: formData.name.split(' ').slice(1).join(' ') || '',
-      phone: formData.phone,
-      metadata: {
-        custom_fields: [
-          { display_name: 'Customer Name', variable_name: 'customer_name', value: formData.name },
-          { display_name: 'Duration', variable_name: 'duration', value: `${duration} hour${duration !== '1' ? 's' : ''}` },
-          { display_name: 'Ticket Code', variable_name: 'ticket_code', value: ticketCode }
-        ]
-      },
-      callback: async function(response: any) {
-        console.log('Payment successful:', response);
-        
-        // Try to save to database, but don't block redirect if it fails
-        try {
-          const { data, error } = await supabase.from('rentals').insert({
-            ticket_code: ticketCode,
-            customer_name: formData.name,
-            customer_phone: formData.phone,
-            customer_email: formData.email || null,
-            duration_hours: parseInt(duration),
-            amount_paid: currentPrice,
-            payment_reference: response.reference,
-            status: 'active',
-            started_at: new Date().toISOString()
-          });
+    try {
+      const handler = (window as any).PaystackPop?.setup({
+        key: 'pk_live_9dd06423b57f6a6f6927e3ea2e28a101baa01fba',
+        email: formData.email || formData.phone + '@okcharge.local',
+        amount: currentPrice * 100,
+        currency: 'NGN',
+        ref: reference,
+        firstname: formData.name.split(' ')[0],
+        lastname: formData.name.split(' ').slice(1).join(' ') || '',
+        phone: formData.phone,
+        metadata: {
+          custom_fields: [
+            { display_name: 'Customer Name', variable_name: 'customer_name', value: formData.name },
+            { display_name: 'Duration', variable_name: 'duration', value: `${duration} hour${duration !== '1' ? 's' : ''}` },
+            { display_name: 'Ticket Code', variable_name: 'ticket_code', value: ticketCode }
+          ]
+        },
+        callback: async function(response: any) {
+          console.log('Payment successful:', response);
+          
+          // Try to save to database (but don't block if it fails)
+          try {
+            const { error } = await supabase.from('rentals').insert({
+              ticket_code: ticketCode,
+              customer_name: formData.name,
+              customer_phone: formData.phone,
+              customer_email: formData.email || null,
+              duration_hours: parseInt(duration),
+              amount_paid: currentPrice,
+              payment_reference: response.reference,
+              status: 'active',
+              started_at: new Date().toISOString()
+            });
 
-          if (error) {
-            console.error('Database error:', error);
-          } else {
-            console.log('Rental saved successfully:', data);
+            if (error) {
+              console.error('Database error:', error.message);
+            }
+          } catch (dbError) {
+            console.error('Failed to save rental:', dbError);
           }
-        } catch (dbError) {
-          console.error('Failed to save rental:', dbError);
-        }
 
-        // ALWAYS redirect, even if database fails
-        setLoading(false);
-        
-        // Small delay to ensure state updates
-        setTimeout(() => {
-          router.push(`/rent/success?ref=${response.reference}&ticket=${ticketCode}`);
-        }, 500);
-      },
-      onClose: function() {
-        alert('Payment window closed. Please try again.');
+          // Always redirect to success page
+          setLoading(false);
+          setTimeout(() => {
+            router.push(`/rent/success?ref=${response.reference}&ticket=${ticketCode}`);
+          }, 300);
+        },
+        onClose: function() {
+          alert('Payment window closed. Please try again.');
+          setLoading(false);
+        }
+      });
+
+      if (handler) {
+        handler.openIframe();
+      } else {
+        alert('Payment system is loading. Please try again in a moment.');
         setLoading(false);
       }
-    });
-
-    if (handler) {
-      handler.openIframe();
-    } else {
-      alert('Payment system is loading. Please try again in a moment.');
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert('An error occurred. Please try again.');
       setLoading(false);
     }
   };
