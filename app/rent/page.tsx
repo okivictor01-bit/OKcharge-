@@ -77,13 +77,43 @@ export default function RentPage() {
     const reference = `OKCHARGE_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const ticketCode = `TKT-${Math.floor(100000 + Math.random() * 900000)}`;
 
+    // Define callbacks as named functions first
+    const onPaymentSuccess = async (response: any) => {
+      console.log('Payment successful:', response);
+      
+      try {
+        await supabase.from('rentals').insert({
+          ticket_code: ticketCode,
+          customer_name: formData.name,
+          customer_phone: formData.phone,
+          customer_email: formData.email || null,
+          duration_hours: parseInt(duration),
+          amount_paid: currentPrice,
+          payment_reference: response.reference,
+          status: 'active',
+          started_at: new Date().toISOString()
+        });
+      } catch (dbError) {
+        console.error('Database error:', dbError);
+      }
+
+      setLoading(false);
+      router.push(`/rent/success?ref=${response.reference}&ticket=${ticketCode}`);
+    };
+
+    const onPaymentClose = () => {
+      console.log('Payment window closed');
+      setLoading(false);
+    };
+
     try {
       const paystackPop = (window as any).PaystackPop;
       
-      if (!paystackPop || !paystackPop.setup) {
+      if (!paystackPop || typeof paystackPop.setup !== 'function') {
         throw new Error('PaystackPop.setup is not available');
       }
 
+      // Create handler with explicit callback functions
       const handler = paystackPop.setup({
         key: 'pk_live_9dd06423b57f6a6f6927e3ea2e28a101baa01fba',
         email: formData.email || formData.phone + '@okcharge.local',
@@ -100,32 +130,15 @@ export default function RentPage() {
             { display_name: 'Ticket Code', variable_name: 'ticket_code', value: ticketCode }
           ]
         },
-        callback: async function(response: any) {
-          try {
-            await supabase.from('rentals').insert({
-              ticket_code: ticketCode,
-              customer_name: formData.name,
-              customer_phone: formData.phone,
-              customer_email: formData.email || null,
-              duration_hours: parseInt(duration),
-              amount_paid: currentPrice,
-              payment_reference: response.reference,
-              status: 'active',
-              started_at: new Date().toISOString()
-            });
-          } catch (dbError) {
-            console.error('Database error:', dbError);
-          }
-
-          setLoading(false);
-          router.push(`/rent/success?ref=${response.reference}&ticket=${ticketCode}`);
-        },
-        onClose: function() {
-          setLoading(false);
-        }
+        callback: onPaymentSuccess,
+        onClose: onPaymentClose
       });
 
-      handler.openIframe();
+      if (handler && typeof handler.openIframe === 'function') {
+        handler.openIframe();
+      } else {
+        throw new Error('Handler.openIframe is not a function');
+      }
     } catch (error: any) {
       console.error('Paystack error:', error);
       setLoading(false);
