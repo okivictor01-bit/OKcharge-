@@ -87,12 +87,14 @@ function PowerBankContent() {
         return;
       }
 
-      // Update rental status to 'active' and assign power bank (Removed handed_over_at)
+      // Update rental: set status to 'active', assign power bank AND location
       const { error: rentalUpdateError } = await supabase
         .from('rentals')
         .update({ 
           status: 'active',
-          power_bank_id: powerBank.id
+          power_bank_id: powerBank.id,
+          location_id: powerBank.location_id, // THIS IS THE FIX!
+          handed_over_at: new Date().toISOString()
         })
         .eq('id', rental.id);
 
