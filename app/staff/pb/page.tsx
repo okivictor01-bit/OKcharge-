@@ -85,9 +85,10 @@ function PowerBankContent() {
         // Use the rental found with 'paid' status
         await completeHandover(rental);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Handover error:', error);
-      setMessage('Error processing handover. Please try again.');
+      const detail = error?.message || error?.details || error?.hint || JSON.stringify(error);
+      setMessage(`Error processing handover: ${detail}`);
       setMessageType('error');
       setLoading(false);
     }
@@ -130,9 +131,10 @@ function PowerBankContent() {
       
       // Refresh power bank data
       fetchPowerBank(powerBank.pb_code);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Handover error:', error);
-      setMessage('Error completing handover. Please try again.');
+      const detail = error?.message || error?.details || error?.hint || JSON.stringify(error);
+      setMessage(`Error completing handover: ${detail}`);
       setMessageType('error');
     } finally {
       setLoading(false);
