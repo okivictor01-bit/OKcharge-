@@ -71,17 +71,10 @@ export default function RentPage() {
         if (error) {
           console.error("Database error:", error);
           alert(`Payment successful but save failed: ${error.message}\nTicket: ${ticketCode}`);
-          setLoading(false);
-          // Still redirect to success page even if DB fails
-          window.location.href = `/rent/success?ref=${response.reference}&ticket=${ticketCode}`;
-          return;
+        } else {
+          console.log("Rental created:", data);
         }
-        console.log("Rental created:", data);
-        setLoading(false);
-        // Use window.location for more reliable redirect
-        window.location.href = `/rent/success?ref=${response.reference}&ticket=${ticketCode}`;
-      }).catch((err) => {
-        console.error("Unexpected error:", err);
+        // Always redirect to success page, regardless of DB error
         setLoading(false);
         window.location.href = `/rent/success?ref=${response.reference}&ticket=${ticketCode}`;
       });
