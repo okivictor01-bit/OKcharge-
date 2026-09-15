@@ -76,32 +76,34 @@ export default function RentPage() {
 
     const reference = `OKCHARGE_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const ticketCode = `TKT-${Math.floor(100000 + Math.random() * 900000)}`;
+    const currentDuration = duration;
+    const currentFormData = { ...formData };
+    const currentPriceValue = currentPrice;
 
-    // Define callbacks as named functions first
-    const onPaymentSuccess = async (response: any) => {
+    // Define the callback function
+    const paymentCallback = function(response: any) {
       console.log('Payment successful:', response);
       
-      try {
-        await supabase.from('rentals').insert({
-          ticket_code: ticketCode,
-          customer_name: formData.name,
-          customer_phone: formData.phone,
-          customer_email: formData.email || null,
-          duration_hours: parseInt(duration),
-          amount_paid: currentPrice,
-          payment_reference: response.reference,
-          status: 'active',
-          started_at: new Date().toISOString()
-        });
-      } catch (dbError) {
-        console.error('Database error:', dbError);
-      }
-
-      setLoading(false);
-      router.push(`/rent/success?ref=${response.reference}&ticket=${ticketCode}`);
+      supabase.from('rentals').insert({
+        ticket_code: ticketCode,
+        customer_name: currentFormData.name,
+        customer_phone: currentFormData.phone,
+        customer_email: currentFormData.email || null,
+        duration_hours: parseInt(currentDuration),
+        amount_paid: currentPriceValue,
+        payment_reference: response.reference,
+        status: 'active',
+        started_at: new Date().toISOString()
+      }).then(({ error }) => {
+        if (error) console.error('Database error:', error);
+        
+        setLoading(false);
+        router.push(`/rent/success?ref=${response.reference}&ticket=${ticketCode}`);
+      });
     };
 
-    const onPaymentClose = () => {
+    // Define the close callback
+    const closeCallback = function() {
       console.log('Payment window closed');
       setLoading(false);
     };
@@ -109,36 +111,30 @@ export default function RentPage() {
     try {
       const paystackPop = (window as any).PaystackPop;
       
-      if (!paystackPop || typeof paystackPop.setup !== 'function') {
-        throw new Error('PaystackPop.setup is not available');
+      if (!paystackPop) {
+        throw new Error('Paystack is not loaded');
       }
 
-      // Create handler with explicit callback functions
-      const handler = paystackPop.setup({
+      paystackPop.setup({
         key: 'pk_live_9dd06423b57f6a6f6927e3ea2e28a101baa01fba',
-        email: formData.email || formData.phone + '@okcharge.local',
-        amount: currentPrice * 100,
+        email: currentFormData.email || currentFormData.phone + '@okcharge.local',
+        amount: currentPriceValue * 100,
         currency: 'NGN',
         ref: reference,
-        firstname: formData.name.split(' ')[0],
-        lastname: formData.name.split(' ').slice(1).join(' ') || '',
-        phone: formData.phone,
+        firstname: currentFormData.name.split(' ')[0],
+        lastname: currentFormData.name.split(' ').slice(1).join(' ') || '',
+        phone: currentFormData.phone,
         metadata: {
           custom_fields: [
-            { display_name: 'Customer Name', variable_name: 'customer_name', value: formData.name },
-            { display_name: 'Duration', variable_name: 'duration', value: `${duration} hour${duration !== '1' ? 's' : ''}` },
+            { display_name: 'Customer Name', variable_name: 'customer_name', value: currentFormData.name },
+            { display_name: 'Duration', variable_name: 'duration', value: `${currentDuration} hour${currentDuration !== '1' ? 's' : ''}` },
             { display_name: 'Ticket Code', variable_name: 'ticket_code', value: ticketCode }
           ]
         },
-        callback: onPaymentSuccess,
-        onClose: onPaymentClose
-      });
-
-      if (handler && typeof handler.openIframe === 'function') {
-        handler.openIframe();
-      } else {
-        throw new Error('Handler.openIframe is not a function');
-      }
+        callback: paymentCallback,
+        onClose: closeCallback
+      }).openIframe();
+      
     } catch (error: any) {
       console.error('Paystack error:', error);
       setLoading(false);
@@ -381,7 +377,7 @@ export default function RentPage() {
                 Processing...
               </span>
             ) : !paystackReady ? (
-              '⏳ Loading Payment System...'
+              ' Loading Payment System...'
             ) : (
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                 Pay ₦{currentPrice} & Rent Now 
