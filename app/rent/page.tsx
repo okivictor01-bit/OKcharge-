@@ -22,7 +22,6 @@ export default function RentPage() {
 
   const currentPrice = prices[duration] || 100;
 
-  // Load Paystack script and wait for it to be ready
   useEffect(() => {
     let attempts = 0;
     const maxAttempts = 20;
@@ -31,27 +30,22 @@ export default function RentPage() {
     script.src = 'https://js.paystack.co/v1/inline.js';
     script.async = true;
     script.onload = () => {
-      console.log('Paystack script loaded, checking for PaystackPop...');
-      
       const checkReady = setInterval(() => {
         attempts++;
         if ((window as any).PaystackPop) {
-          console.log('PaystackPop is ready!');
           setPaystackReady(true);
           clearInterval(checkReady);
         } else if (attempts >= maxAttempts) {
-          console.error('PaystackPop not available after 20 attempts');
           clearInterval(checkReady);
         }
       }, 500);
     };
-    script.onerror = () => {
-      console.error('Failed to load Paystack script');
-    };
     document.body.appendChild(script);
 
     return () => {
-      document.body.removeChild(script);
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
     };
   }, []);
 
@@ -107,8 +101,6 @@ export default function RentPage() {
           ]
         },
         callback: async function(response: any) {
-          console.log('Payment successful:', response);
-          
           try {
             await supabase.from('rentals').insert({
               ticket_code: ticketCode,
@@ -129,7 +121,6 @@ export default function RentPage() {
           router.push(`/rent/success?ref=${response.reference}&ticket=${ticketCode}`);
         },
         onClose: function() {
-          console.log('Payment window closed');
           setLoading(false);
         }
       });
@@ -163,7 +154,6 @@ export default function RentPage() {
       </div>
 
       <div style={{ maxWidth: '500px', margin: '0 auto', padding: '20px' }}>
-        
         <div style={{ 
           backgroundColor: 'white', 
           padding: '25px', 
@@ -272,3 +262,128 @@ export default function RentPage() {
           <div style={{ marginBottom: '18px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px', color: '#475569' }}>
               Phone Number (WhatsApp) <span style={{ color: '#ef4444' }}>*</span>
+            </label>
+            <input
+              type="tel"
+              required
+              placeholder="08012345678"
+              value={formData.phone}
+              onChange={(e) => setFormData({...formData, phone: e.target.value})}
+              style={{ 
+                width: '100%', 
+                padding: '16px', 
+                border: '2px solid #e2e8f0', 
+                borderRadius: '12px', 
+                fontSize: '16px', 
+                boxSizing: 'border-box',
+                outline: 'none'
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '22px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px', color: '#475569' }}>
+              Email Address <span style={{ color: '#94a3b8', fontSize: '12px' }}>(Optional)</span>
+            </label>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              style={{ 
+                width: '100%', 
+                padding: '16px', 
+                border: '2px solid #e2e8f0', 
+                borderRadius: '12px', 
+                fontSize: '16px', 
+                boxSizing: 'border-box',
+                outline: 'none'
+              }}
+            />
+          </div>
+
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'flex-start', 
+            gap: '12px', 
+            marginBottom: '25px',
+            padding: '15px',
+            backgroundColor: '#f8fafc',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0'
+          }}>
+            <input
+              type="checkbox"
+              id="terms"
+              checked={agreeTerms}
+              onChange={(e) => setAgreeTerms(e.target.checked)}
+              style={{ 
+                marginTop: '3px', 
+                transform: 'scale(1.3)',
+                cursor: 'pointer',
+                accentColor: '#10b981'
+              }}
+              required
+            />
+            <label 
+              htmlFor="terms" 
+              style={{ 
+                fontSize: '13px', 
+                color: '#64748b', 
+                lineHeight: '1.5',
+                cursor: 'pointer',
+                fontWeight: '500'
+              }}
+            >
+              I agree to the <a href="/terms" target="_blank" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '600' }}>Terms & Conditions</a>, including the <strong style={{ color: '#ef4444' }}>₦15,000</strong> replacement fee for unreturned power banks.
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading || !paystackReady}
+            style={{
+              width: '100%',
+              padding: '18px 24px',
+              background: loading || !paystackReady ? '#94a3b8' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '14px',
+              fontSize: '18px',
+              fontWeight: '700',
+              cursor: loading || !paystackReady ? 'not-allowed' : 'pointer',
+              boxShadow: loading || !paystackReady ? 'none' : '0 6px 20px rgba(16, 185, 129, 0.4)',
+            }}
+          >
+            {loading ? (
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                <span style={{ 
+                  width: '20px', 
+                  height: '20px', 
+                  border: '3px solid rgba(255,255,255,0.3)', 
+                  borderTop: '3px solid white', 
+                  borderRadius: '50%', 
+                  animation: 'spin 1s linear infinite'
+                }} />
+                Processing...
+              </span>
+            ) : !paystackReady ? (
+              '⏳ Loading Payment System...'
+            ) : (
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                Pay ₦{currentPrice} & Rent Now 
+              </span>
+            )}
+          </button>
+        </form>
+      </div>
+
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </main>
+  );
+}
