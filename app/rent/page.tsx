@@ -79,53 +79,54 @@ export default function RentPage() {
     const currentDuration = duration;
     const currentFormData = { ...formData };
     const currentPriceValue = currentPrice;
+    const currentRouter = router;
 
-    const paymentCallback = async function(response: any) {
+    // Define callback as a proper function
+    function onPaymentSuccess(response: any) {
       console.log('Payment successful:', response);
       console.log('Creating rental with ticket:', ticketCode);
       
-      try {
-        // Insert rental with correct column names matching your database schema
-        const { data, error } = await supabase
-          .from('rentals')
-          .insert({
-            ticket_code: ticketCode,
-            customer_name: currentFormData.name,
-            customer_phone: currentFormData.phone,
-            duration_hours: parseInt(currentDuration),
-            amount_paid: currentPriceValue,
-            paystack_reference: response.reference,
-            status: 'paid',
-            started_at: new Date().toISOString(),
-            revenue_split_owner: 50,
-            revenue_split_platform: 50,
-            power_bank_ownership_type: 'okcharge'
-          })
-          .select()
-          .single();
+      supabase
+        .from('rentals')
+        .insert({
+          ticket_code: ticketCode,
+          customer_name: currentFormData.name,
+          customer_phone: currentFormData.phone,
+          duration_hours: parseInt(currentDuration),
+          amount_paid: currentPriceValue,
+          paystack_reference: response.reference,
+          status: 'paid',
+          started_at: new Date().toISOString(),
+          revenue_split_owner: 50,
+          revenue_split_platform: 50,
+          power_bank_ownership_type: 'okcharge'
+        })
+        .select()
+        .single()
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Database error:', error);
+            alert(`Payment successful but rental save failed: ${error.message}\n\nTicket: ${ticketCode}\nReference: ${response.reference}`);
+            setLoading(false);
+            return;
+          }
 
-        if (error) {
-          console.error('Database error details:', error);
-          alert(`Payment successful but rental save failed: ${error.message}\n\nTicket: ${ticketCode}\nReference: ${response.reference}\n\nPlease screenshot this and contact support.`);
+          console.log('Rental created successfully:', data);
           setLoading(false);
-          return;
-        }
+          currentRouter.push(`/rent/success?ref=${response.reference}&ticket=${ticketCode}`);
+        })
+        .catch((dbError) => {
+          console.error('Unexpected error:', dbError);
+          alert(`Payment successful but there was an issue saving your rental.\n\nTicket: ${ticketCode}`);
+          setLoading(false);
+        });
+    }
 
-        console.log('Rental created successfully:', data);
-        
-        setLoading(false);
-        router.push(`/rent/success?ref=${response.reference}&ticket=${ticketCode}`);
-      } catch (dbError: any) {
-        console.error('Unexpected error:', dbError);
-        alert(`Payment successful but there was an issue saving your rental.\n\nTicket: ${ticketCode}\nError: ${dbError.message}\n\nPlease contact support.`);
-        setLoading(false);
-      }
-    };
-
-    const closeCallback = function() {
+    // Define close callback
+    function onCloseCallback() {
       console.log('Payment window closed');
       setLoading(false);
-    };
+    }
 
     try {
       const paystackPop = (window as any).PaystackPop;
@@ -134,7 +135,11 @@ export default function RentPage() {
         throw new Error('Paystack is not loaded');
       }
 
-      paystackPop.setup({
+      if (typeof paystackPop.setup !== 'function') {
+        throw new Error('PaystackPop.setup is not a function');
+      }
+
+      const handler = paystackPop.setup({
         key: 'pk_live_9dd06423b57f6a6f6927e3ea2e28a101baa01fba',
         email: currentFormData.email || currentFormData.phone + '@okcharge.local',
         amount: currentPriceValue * 100,
@@ -150,9 +155,15 @@ export default function RentPage() {
             { display_name: 'Ticket Code', variable_name: 'ticket_code', value: ticketCode }
           ]
         },
-        callback: paymentCallback,
-        onClose: closeCallback
-      }).openIframe();
+        callback: onPaymentSuccess,
+        onClose: onCloseCallback
+      });
+
+      if (handler && typeof handler.openIframe === 'function') {
+        handler.openIframe();
+      } else {
+        throw new Error('Handler.openIframe is not available');
+      }
       
     } catch (error: any) {
       console.error('Paystack error:', error);
@@ -234,7 +245,7 @@ export default function RentPage() {
                     fontSize: '18px',
                     marginTop: '5px'
                   }}>
-                    ₦{price}
+                    {price}
                   </div>
                 </button>
               );
