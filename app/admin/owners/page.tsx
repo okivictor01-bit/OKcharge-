@@ -100,7 +100,6 @@ export default function AdminOwners() {
     }
   };
 
-  // NEW: Approve Owner Function
   const handleApproveOwner = async (ownerId: string) => {
     const { error } = await supabase
       .from('location_owners')
@@ -120,32 +119,24 @@ export default function AdminOwners() {
     if (!confirmDelete) return;
 
     try {
-      console.log('Starting delete for owner:', ownerId);
-      
       const { error: locError } = await supabase
         .from('locations')
         .update({ owner_id: null })
         .eq('owner_id', ownerId);
       
-      if (locError) {
-        console.error('Location update error:', locError);
-      }
+      if (locError) console.error('Location update error:', locError);
 
       const { error: ownerError } = await supabase
         .from('location_owners')
         .delete()
         .eq('id', ownerId);
       
-      if (ownerError) {
-        throw ownerError;
-      }
+      if (ownerError) throw ownerError;
       
       alert(`✅ "${businessName}" has been deleted.`);
       fetchOwners();
     } catch (error: any) {
-      console.error('Full error:', error);
-      let errorMsg = error.message || 'Unknown error';
-      alert('❌ Delete failed:\n' + errorMsg);
+      alert('❌ Delete failed:\n' + error.message);
     }
   };
 
@@ -219,18 +210,15 @@ export default function AdminOwners() {
                 <div style={{ flex: 1 }}>
                   <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', color: '#0f172a' }}>{owner.business_name}</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '14px', color: '#64748b' }}>
-                    {owner.phone && <span>📞 {owner.phone}</span>}
+                    {owner.phone && <span> {owner.phone}</span>}
                     {owner.email && <span>✉️ {owner.email}</span>}
                   </div>
+                  
+                  {/* UPDATED: Hardcoded 50% and removed Edit button */}
                   <div style={{ marginTop: '10px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>💰 Revenue Share: {owner.revenue_share || '30'}%</span>
-                    <button
-                      onClick={() => {/* Edit revenue share logic */}}
-                      style={{ padding: '4px 12px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: 'white', cursor: 'pointer' }}
-                    >
-                      Edit
-                    </button>
+                    <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>💰 Revenue Share: 50% (Standard)</span>
                   </div>
+                  
                   <p style={{ margin: '10px 0 0 0', fontSize: '13px', color: '#94a3b8' }}>
                     Registered: {owner.created_at ? new Date(owner.created_at).toLocaleDateString() : 'N/A'}
                   </p>
@@ -263,7 +251,6 @@ export default function AdminOwners() {
                      Reset Password
                   </button>
 
-                  {/* NEW: Approve Owner Button */}
                   <button
                     onClick={() => handleApproveOwner(owner.id)}
                     style={{
@@ -313,21 +300,6 @@ export default function AdminOwners() {
                   </button>
                 </div>
               </div>
-
-              {/* Assigned Locations */}
-              {owner.locations && owner.locations.length > 0 && (
-                <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #f1f5f9' }}>
-                  <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#475569' }}>
-                    Assigned Locations ({owner.locations.length}):
-                  </h4>
-                  {owner.locations.map((loc: any) => (
-                    <div key={loc.id} style={{ padding: '10px', backgroundColor: '#f8fafc', borderRadius: '6px', marginBottom: '8px' }}>
-                      <p style={{ margin: 0, fontWeight: 'bold', color: '#0f172a' }}>{loc.name}</p>
-                      <p style={{ margin: '5px 0 0 0', fontSize: '13px', color: '#64748b' }}>{loc.address}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           ))}
         </div>
