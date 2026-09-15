@@ -13,7 +13,6 @@ export default function RentPage() {
   const [paystackScriptLoaded, setPaystackScriptLoaded] = useState(false);
   const [selectedDuration, setSelectedDuration] = useState('1');
 
-  // Updated Prices
   const prices: Record<string, number> = {
     '1': 100,
     '3': 250,
@@ -23,7 +22,6 @@ export default function RentPage() {
 
   const currentPrice = prices[duration] || 100;
 
-  // Load Paystack script
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const script = document.createElement('script');
@@ -58,7 +56,6 @@ export default function RentPage() {
 
     setLoading(true);
 
-    // Generate unique reference and 6-digit ticket code
     const reference = `OKCHARGE_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const ticketCode = `TKT-${Math.floor(100000 + Math.random() * 900000)}`;
 
@@ -79,9 +76,11 @@ export default function RentPage() {
         ]
       },
       callback: async function(response: any) {
-        // 1. Save the rental record to the database immediately
+        console.log('Payment successful:', response);
+        
+        // Try to save to database, but don't block redirect if it fails
         try {
-          const { error } = await supabase.from('rentals').insert({
+          const { data, error } = await supabase.from('rentals').insert({
             ticket_code: ticketCode,
             customer_name: formData.name,
             customer_phone: formData.phone,
@@ -94,15 +93,21 @@ export default function RentPage() {
           });
 
           if (error) {
-            console.error("Database error:", error);
+            console.error('Database error:', error);
+          } else {
+            console.log('Rental saved successfully:', data);
           }
         } catch (dbError) {
-          console.error("Failed to save to DB:", dbError);
+          console.error('Failed to save rental:', dbError);
         }
 
-        // 2. Redirect to success page with the ticket code
+        // ALWAYS redirect, even if database fails
         setLoading(false);
-        router.push(`/rent/success?ref=${response.reference}&ticket=${ticketCode}`);
+        
+        // Small delay to ensure state updates
+        setTimeout(() => {
+          router.push(`/rent/success?ref=${response.reference}&ticket=${ticketCode}`);
+        }, 500);
       },
       onClose: function() {
         alert('Payment window closed. Please try again.');
@@ -125,7 +130,6 @@ export default function RentPage() {
       minHeight: '100vh',
       paddingBottom: '120px'
     }}>
-      {/* Animated Header */}
       <div style={{ 
         background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', 
         color: 'white', 
@@ -141,7 +145,6 @@ export default function RentPage() {
 
       <div style={{ maxWidth: '500px', margin: '0 auto', padding: '20px' }}>
         
-        {/* Step 1: Duration Selection */}
         <div style={{ 
           backgroundColor: 'white', 
           padding: '25px', 
@@ -202,7 +205,6 @@ export default function RentPage() {
           </div>
         </div>
 
-        {/* Step 2: Customer Details Form */}
         <form onSubmit={handleCheckout} style={{ 
           backgroundColor: 'white', 
           padding: '25px', 
@@ -243,11 +245,8 @@ export default function RentPage() {
                 borderRadius: '12px', 
                 fontSize: '16px', 
                 boxSizing: 'border-box',
-                transition: 'border-color 0.3s',
                 outline: 'none'
               }}
-              onFocus={(e) => e.target.style.borderColor = '#10b981'}
-              onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
             />
           </div>
 
@@ -268,11 +267,8 @@ export default function RentPage() {
                 borderRadius: '12px', 
                 fontSize: '16px', 
                 boxSizing: 'border-box',
-                transition: 'border-color 0.3s',
                 outline: 'none'
               }}
-              onFocus={(e) => e.target.style.borderColor = '#10b981'}
-              onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
             />
           </div>
 
@@ -292,15 +288,11 @@ export default function RentPage() {
                 borderRadius: '12px', 
                 fontSize: '16px', 
                 boxSizing: 'border-box',
-                transition: 'border-color 0.3s',
                 outline: 'none'
               }}
-              onFocus={(e) => e.target.style.borderColor = '#10b981'}
-              onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
             />
           </div>
 
-          {/* Terms Checkbox */}
           <div style={{ 
             display: 'flex', 
             alignItems: 'flex-start', 
@@ -340,7 +332,6 @@ export default function RentPage() {
         </form>
       </div>
 
-      {/* Sticky Pay Button */}
       <div style={{
         position: 'fixed',
         bottom: 0,
@@ -372,7 +363,6 @@ export default function RentPage() {
             fontWeight: '700',
             cursor: loading || !paystackScriptLoaded ? 'not-allowed' : 'pointer',
             boxShadow: loading || !paystackScriptLoaded ? 'none' : '0 6px 20px rgba(16, 185, 129, 0.4)',
-            transition: 'all 0.3s ease'
           }}
         >
           {loading ? (
@@ -391,13 +381,12 @@ export default function RentPage() {
             'Loading Payment...'
           ) : (
             <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              Pay ₦{currentPrice} & Rent Now 🔓
+              Pay ₦{currentPrice} & Rent Now 
             </span>
           )}
         </button>
       </div>
 
-      {/* CSS for animations */}
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
