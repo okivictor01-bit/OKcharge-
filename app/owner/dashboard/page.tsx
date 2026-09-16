@@ -62,7 +62,6 @@ function DashboardContent() {
   const loadDashboardData = async () => {
     setLoading(true);
     
-    // For now, we'll load all rentals. Later we'll add owner filtering
     const { data, error } = await supabase
       .from('rentals')
       .select('*')
@@ -73,14 +72,12 @@ function DashboardContent() {
     } else if (data) {
       setRentals(data);
       
-      // Calculate earnings (50% of completed/active rentals)
       const earnings = data
         .filter(r => r.status === 'returned' || r.status === 'active')
         .reduce((sum, r) => sum + (r.amount_paid * 0.5), 0);
       
       setTotalEarnings(earnings);
       
-      // Count active rentals
       const active = data.filter(r => r.status === 'active').length;
       setActiveRentals(active);
     }
@@ -109,7 +106,7 @@ function DashboardContent() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '30px' }}>
         <div style={{ backgroundColor: '#10b981', color: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
           <p style={{ margin: '0 0 5px 0', fontSize: '13px', opacity: 0.9 }}>Total Earnings (50%)</p>
-          <h2 style={{ margin: 0, fontSize: '28px', fontWeight: 'bold' }}>{totalEarnings.toLocaleString()}</h2>
+          <h2 style={{ margin: 0, fontSize: '28px', fontWeight: 'bold' }}>₦{totalEarnings.toLocaleString()}</h2>
         </div>
         <div style={{ backgroundColor: '#3b82f6', color: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
           <p style={{ margin: '0 0 5px 0', fontSize: '13px', opacity: 0.9 }}>Active Rentals</p>
@@ -179,7 +176,7 @@ function DashboardContent() {
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 'bold', color: '#10b981' }}>+₦{(rental.amount_paid * 0.5).toFixed(0)}</div>
+                  <div style={{ fontWeight: 'bold', color: '#10b981' }}>+{(rental.amount_paid * 0.5).toFixed(0)}</div>
                   <div style={{ fontSize: '11px', color: '#64748b' }}>{rental.duration_hours}h - ₦{rental.amount_paid}</div>
                 </div>
               </div>
