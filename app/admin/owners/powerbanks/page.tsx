@@ -12,6 +12,7 @@ function PowerBanksContent() {
   const [ownerName, setOwnerName] = useState('Loading...');
   const [powerBanks, setPowerBanks] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
+  const [allLocations, setAllLocations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [formData, setFormData] = useState({ pbCode: '', locationId: '' });
@@ -34,6 +35,14 @@ function PowerBanksContent() {
 
     if (ownerData) setOwnerName(ownerData.full_name || 'Owner');
 
+    // Get ALL locations (not just owner's)
+    const { data: allLocsData } = await supabase
+      .from('locations')
+      .select('*')
+      .order('location_code');
+
+    if (allLocsData) setAllLocations(allLocsData);
+
     // Get owner's locations
     const { data: locationsData } = await supabase
       .from('locations')
@@ -42,16 +51,19 @@ function PowerBanksContent() {
 
     if (locationsData) setLocations(locationsData || []);
 
-    // Get power banks for owner's locations
-    if (locationsData && locationsData.length > 0) {
-      const locationIds = locationsData.map((loc: any) => loc.id);
-      const { data: pbData } = await supabase
-        .from('power_banks')
-        .select('*, locations(name, location_code)')
-        .in('location_id', locationIds)
-        .order('pb_code');
+    // Get ALL power banks
+    const { data: pbData } = await supabase
+      .from('power_banks')
+      .select('*, locations(name, location_code, owner_id)')
+      .order('pb_code');
 
-      if (pbData) setPowerBanks(pbData);
+    if (pbData) {
+      // Filter to show only power banks at owner's locations
+      const ownerLocationIds = locationsData?.map((loc: any) => loc.id) || [];
+      const ownerPowerBanks = pbData.filter((pb: any) => 
+        ownerLocationIds.includes(pb.location_id)
+      );
+      setPowerBanks(ownerPowerBanks);
     }
 
     setLoading(false);
@@ -113,8 +125,28 @@ function PowerBanksContent() {
     }
   };
 
+  const handleAssignLocation = async (pbId: string, locationId: string) => {
+    const { error } = await supabase
+      .from('power_banks')
+      .update({ location_id: locationId })
+      .eq('id', pbId);
+
+    if (!error) {
+      alert('Power bank assigned to location');
+      loadData();
+    } else {
+      alert('Error: ' + error.message);
+    }
+  };
+
   if (loading) return <div style={{ padding: '20px' }}>Loading...</div>;
   if (!ownerId) return <div style={{ padding: '20px' }}>No owner selected.</div>;
+
+  // Get power banks not assigned to any of owner's locations
+  const ownerLocationIds = locations.map((loc: any) => loc.id);
+  const unassignedPowerBanks = powerBanks.filter((pb: any) => 
+    !ownerLocationIds.includes(pb.location_id)
+  );
 
   return (
     <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '900px', margin: '0 auto' }}>
@@ -124,7 +156,7 @@ function PowerBanksContent() {
           <p style={{ color: '#64748b', margin: 0 }}>{powerBanks.length} power bank(s) • {locations.length} location(s)</p>
         </div>
         <button 
-          onClick={() => locations.length > 0 ? setShowAddModal(true) : alert('Please create a location first before adding power banks.')}
+          onClick={() => locations.length > 0 ? setShowAddModal(true) : alert('Please create a location first.')}
           style={{ 
             padding: '10px 20px', 
             backgroundColor: locations.length > 0 ? '#10b981' : '#94a3b8', 
@@ -150,6 +182,39 @@ function PowerBanksContent() {
           >
              Create Location Now
           </button>
+        </div>
+      )}
+
+      {/* Show unassigned power banks */}
+      {unassignedPowerBanks.length > 0 && (
+        <div style={{ backgroundColor: '#dbeafe', padding: '20px', borderRadius: '12px', border: '2px solid #3b82f6', marginBottom: '20px' }}>
+          <h3 style={{ margin: '0 0 15px 0', color: '#1e40af' }}>📦 Power Banks at Other Locations ({unassignedPowerBanks.length})</h3>
+          <div style={{ display: 'grid', gap: '10px' }}>
+            {unassignedPowerBanks.map((pb: any) => (
+              <div key={pb.id} style={{ backgroundColor: 'white', padding: '15px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <strong>{pb.pb_code}</strong>
+                  <p style={{ margin: '5px 0 0 0', fontSize: '13px', color: '#64748b' }}>
+                    Currently at: {pb.locations?.name || 'Unknown'} ({pb.locations?.location_code || '---'})
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <select 
+                    onChange={(e) => {
+                      if (e.target.value) handleAssignLocation(pb.id, e.target.value);
+                    }}
+                    defaultValue=""
+                    style={{ padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                  >
+                    <option value="">Assign to location...</option>
+                    {locations.map((loc: any) => (
+                      <option key={loc.id} value={loc.id}>{loc.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -186,10 +251,10 @@ function PowerBanksContent() {
         </div>
       )}
 
-      {/* Power Banks List */}
-      {powerBanks.length === 0 ? (
+      {/* Owner's Power Banks List */}
+      {powerBanks.filter((pb: any) => ownerLocationIds.includes(pb.location_id)).length === 0 ? (
         <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', textAlign: 'center', color: '#64748b' }}>
-          <p style={{ fontSize: '18px', marginBottom: '10px' }}>No power banks yet</p>
+          <p style={{ fontSize: '18px', marginBottom: '10px' }}>No power banks at your locations yet</p>
           {locations.length > 0 ? (
             <p style={{ fontSize: '14px' }}>Click "Add Power Bank" to create one</p>
           ) : (
@@ -197,36 +262,39 @@ function PowerBanksContent() {
           )}
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: '15px' }}>
-          {powerBanks.map((pb: any) => (
-            <div key={pb.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h3 style={{ margin: '0 0 5px 0', fontSize: '18px' }}>{pb.pb_code}</h3>
-                <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>
-                  {pb.locations?.name || 'No location'} ({pb.locations?.location_code || '---'})
-                </p>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>
-                  Status: <span style={{ 
-                    padding: '2px 8px', 
-                    borderRadius: '4px', 
-                    backgroundColor: pb.status === 'available' ? '#dcfce7' : '#fef3c7',
-                    color: pb.status === 'available' ? '#15803d' : '#b45309',
-                    fontWeight: 'bold'
-                  }}>
-                    {pb.status.toUpperCase()}
-                  </span>
-                </p>
+        <div>
+          <h3 style={{ fontSize: '18px', marginBottom: '15px', color: '#0f172a' }}>Power Banks at Your Locations</h3>
+          <div style={{ display: 'grid', gap: '15px' }}>
+            {powerBanks.filter((pb: any) => ownerLocationIds.includes(pb.location_id)).map((pb: any) => (
+              <div key={pb.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3 style={{ margin: '0 0 5px 0', fontSize: '18px' }}>{pb.pb_code}</h3>
+                  <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>
+                    {pb.locations?.name || 'No location'} ({pb.locations?.location_code || '---'})
+                  </p>
+                  <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>
+                    Status: <span style={{ 
+                      padding: '2px 8px', 
+                      borderRadius: '4px', 
+                      backgroundColor: pb.status === 'available' ? '#dcfce7' : '#fef3c7',
+                      color: pb.status === 'available' ? '#15803d' : '#b45309',
+                      fontWeight: 'bold'
+                    }}>
+                      {pb.status.toUpperCase()}
+                    </span>
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={() => handlePrint(pb.pb_code)} style={{ padding: '8px 15px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                    🖨️ Print
+                  </button>
+                  <button onClick={() => handleDelete(pb.id)} style={{ padding: '8px 15px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                    Delete
+                  </button>
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => handlePrint(pb.pb_code)} style={{ padding: '8px 15px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                  🖨️ Print
-                </button>
-                <button onClick={() => handleDelete(pb.id)} style={{ padding: '8px 15px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 
