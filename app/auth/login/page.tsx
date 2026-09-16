@@ -82,6 +82,14 @@ export default function LoginPage() {
       <div style={{ textAlign: 'center', marginTop: '30px' }}>
         <a href="/auth/staff-register" style={{ color: '#2563eb', fontSize: '14px' }}>Create Staff Account</a>
       </div>
+      <div style={{ textAlign: 'center', marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #e2e8f0' }}>
+  <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '10px' }}>Other login options:</p>
+  <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+    <a href="/auth/admin-login" style={{ color: '#7c3aed', fontSize: '13px' }}>Admin Login</a>
+    <span style={{ color: '#cbd5e1' }}>•</span>
+    <a href="/auth/staff-register" style={{ color: '#2563eb', fontSize: '13px' }}>Staff Registration</a>
+  </div>
+</div>
     </main>
   );
 }
