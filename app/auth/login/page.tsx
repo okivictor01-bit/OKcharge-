@@ -27,40 +27,58 @@ export default function LoginPage() {
       return;
     }
 
+    // Wait a moment for auth to settle
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     // Get user's role from profile
     if (data.user) {
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role, status')
-        .eq('user_id', data.user.id)
-        .single();
+      try {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role, status')
+          .eq('user_id', data.user.id)
+          .single();
 
-      if (profileError || !profile) {
-        setError('Profile not found. Please contact support.');
-        setLoading(false);
-        return;
-      }
+        if (profileError) {
+          console.error('Profile error:', profileError);
+          setError('Profile not found. Please contact support.');
+          await supabase.auth.signOut();
+          setLoading(false);
+          return;
+        }
 
-      // Check if account is approved
-      if (profile.status !== 'approved') {
-        setError('Your account is pending approval. Please wait for admin approval.');
+        if (!profile) {
+          setError('Profile not found. Please contact support.');
+          await supabase.auth.signOut();
+          setLoading(false);
+          return;
+        }
+
+        // Check if account is approved
+        if (profile.status !== 'approved') {
+          setError('Your account is pending approval. Please wait for admin approval.');
+          await supabase.auth.signOut();
+          setLoading(false);
+          return;
+        }
+
+        // Redirect based on role
+        if (profile.role === 'staff') {
+          router.push('/staff/dashboard');
+        } else if (profile.role === 'admin') {
+          router.push('/admin/dashboard');
+        } else if (profile.role === 'owner') {
+          router.push('/owner/dashboard');
+        } else {
+          router.push('/owner/dashboard');
+        }
+      } catch (err) {
+        console.error('Login error:', err);
+        setError('An error occurred during login. Please try again.');
         await supabase.auth.signOut();
-        setLoading(false);
-        return;
-      }
-
-      // Redirect based on role
-      if (profile.role === 'staff') {
-        router.push('/staff/dashboard');
-      } else if (profile.role === 'admin') {
-        router.push('/admin/dashboard');
-      } else if (profile.role === 'owner') {
-        router.push('/owner/dashboard');
-      } else {
-        // Default to owner dashboard
-        router.push('/owner/dashboard');
       }
     }
+    setLoading(false);
   };
 
   return (
@@ -101,9 +119,6 @@ export default function LoginPage() {
       <div style={{ textAlign: 'center', marginTop: '30px' }}>
         <p style={{ fontSize: '14px', color: '#64748b' }}>
           Don't have an account? <a href="/auth/register" style={{ color: '#2563eb' }}>Register as Partner</a>
-        </p>
-        <p style={{ fontSize: '14px', color: '#64748b', marginTop: '10px' }}>
-          <a href="/auth/admin-login" style={{ color: '#7c3aed' }}>Admin Login</a>
         </p>
       </div>
     </main>
