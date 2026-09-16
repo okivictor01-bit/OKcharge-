@@ -35,7 +35,6 @@ export default function AdminDashboard() {
         return;
       }
 
-      // Load stats
       await loadStats();
       setLoading(false);
     };
@@ -63,13 +62,13 @@ export default function AdminDashboard() {
     router.push('/auth/admin-login');
   };
 
-  if (loading) return <div style={{ padding: '20px' }}>Loading...</div>;
+  if (loading) return <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>Loading...</div>;
 
   return (
     <main style={{ fontFamily: 'sans-serif', backgroundColor: '#f8fafc', minHeight: '100vh', padding: '20px' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-        <h1 style={{ margin: 0, fontSize: '28px', color: '#0f172a' }}>Admin Dashboard</h1>
+        <h1 style={{ margin: 0, fontSize: '24px', color: '#0f172a' }}>Admin Dashboard</h1>
         <button onClick={handleLogout} style={{ padding: '10px 20px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Logout</button>
       </div>
 
@@ -77,9 +76,10 @@ export default function AdminDashboard() {
       <div style={{ marginBottom: '30px' }}>
         <h2 style={{ fontSize: '18px', marginBottom: '15px', color: '#475569' }}>Quick Actions</h2>
         <div style={{ display: 'grid', gap: '15px' }}>
+          
           <div onClick={() => router.push('/admin/locations')} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <span style={{ fontSize: '24px' }}>📍</span>
+              <span style={{ fontSize: '24px' }}></span>
               <div>
                 <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Manage Locations</h3>
                 <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#64748b' }}>{stats.totalLocations} total</p>
@@ -99,9 +99,9 @@ export default function AdminDashboard() {
             <span style={{ color: '#94a3b8' }}>→</span>
           </div>
 
-          <div onClick={() => router.push('/staff/dashboard')} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div onClick={() => router.push('/admin/staff')} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <span style={{ fontSize: '24px' }}></span>
+              <span style={{ fontSize: '24px' }}>👥</span>
               <div>
                 <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Manage Staff</h3>
                 <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#64748b' }}>View & manage staff accounts</p>
@@ -112,7 +112,7 @@ export default function AdminDashboard() {
 
           <div onClick={() => router.push('/admin/powerbanks')} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <span style={{ fontSize: '24px' }}>🔋</span>
+              <span style={{ fontSize: '24px' }}></span>
               <div>
                 <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Manage Power Banks</h3>
                 <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#64748b' }}>{stats.totalPowerBanks} power banks</p>
@@ -121,16 +121,17 @@ export default function AdminDashboard() {
             <span style={{ color: '#94a3b8' }}>→</span>
           </div>
 
-          <div onClick={() => router.push('/admin/generate-qr')} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div onClick={() => router.push('/admin/print-all-qr')} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <span style={{ fontSize: '24px' }}>️</span>
+              <span style={{ fontSize: '24px' }}>🖨️</span>
               <div>
-                <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Print QR Codes</h3>
-                <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#64748b' }}>Generate & print QR codes</p>
+                <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Print All QR Codes</h3>
+                <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#64748b' }}>Generate & print all QR codes</p>
               </div>
             </div>
             <span style={{ color: '#94a3b8' }}>→</span>
           </div>
+
         </div>
       </div>
 
