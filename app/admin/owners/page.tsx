@@ -54,7 +54,7 @@ export default function AdminOwnersPage() {
     }
   };
 
-  if (loading) return <div style={{ padding: '20px' }}>Loading owners...</div>;
+  if (loading) return <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>Loading owners...</div>;
 
   return (
     <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '800px', margin: '0 auto' }}>
@@ -91,12 +91,12 @@ export default function AdminOwnersPage() {
               </div>
 
               <div style={{ display: 'flex', gap: '10px', marginTop: '15px', flexWrap: 'wrap' }}>
-                {/* NEW: Manage Power Banks Button */}
+                {/* UPDATED: Manage Power Banks Button using query parameter */}
                 <button 
-                  onClick={() => router.push(`/admin/owners/${owner.user_id}/powerbanks`)}
+                  onClick={() => router.push(`/admin/owners/powerbanks?ownerId=${owner.user_id}`)}
                   style={{ padding: '8px 15px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
                 >
-                   Manage Power Banks
+                  🔋 Manage Power Banks
                 </button>
 
                 {owner.status !== 'approved' && (
