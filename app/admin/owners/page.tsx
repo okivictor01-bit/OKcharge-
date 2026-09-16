@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 
 export default function AdminOwnersPage() {
+  const router = useRouter();
   const [owners, setOwners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,10 +28,10 @@ export default function AdminOwnersPage() {
     const { error } = await supabase
       .from('profiles')
       .update({ status: newStatus })
-      .eq('id', id);
+      .eq('user_id', id);
 
     if (!error) {
-      setOwners(owners.map(o => o.id === id ? { ...o, status: newStatus } : o));
+      setOwners(owners.map(o => o.user_id === id ? { ...o, status: newStatus } : o));
       alert(`Owner ${newStatus} successfully!`);
     } else {
       alert('Error updating status: ' + error.message);
@@ -42,10 +44,10 @@ export default function AdminOwnersPage() {
     const { error } = await supabase
       .from('profiles')
       .delete()
-      .eq('id', id);
+      .eq('user_id', id);
 
     if (!error) {
-      setOwners(owners.filter(o => o.id !== id));
+      setOwners(owners.filter(o => o.user_id !== id));
       alert('Owner deleted successfully!');
     } else {
       alert('Error deleting owner: ' + error.message);
@@ -63,7 +65,7 @@ export default function AdminOwnersPage() {
           <p>No owners registered yet.</p>
         ) : (
           owners.map((owner) => (
-            <div key={owner.id} style={{ 
+            <div key={owner.user_id} style={{ 
               backgroundColor: 'white', 
               padding: '20px', 
               borderRadius: '12px', 
@@ -89,9 +91,17 @@ export default function AdminOwnersPage() {
               </div>
 
               <div style={{ display: 'flex', gap: '10px', marginTop: '15px', flexWrap: 'wrap' }}>
+                {/* NEW: Manage Power Banks Button */}
+                <button 
+                  onClick={() => router.push(`/admin/owners/${owner.user_id}/powerbanks`)}
+                  style={{ padding: '8px 15px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                >
+                   Manage Power Banks
+                </button>
+
                 {owner.status !== 'approved' && (
                   <button 
-                    onClick={() => handleStatusChange(owner.id, 'approved')}
+                    onClick={() => handleStatusChange(owner.user_id, 'approved')}
                     style={{ padding: '8px 15px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
                   >
                     Approve
@@ -99,14 +109,14 @@ export default function AdminOwnersPage() {
                 )}
                 {owner.status !== 'suspended' && (
                   <button 
-                    onClick={() => handleStatusChange(owner.id, 'suspended')}
+                    onClick={() => handleStatusChange(owner.user_id, 'suspended')}
                     style={{ padding: '8px 15px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
                   >
                     Suspend
                   </button>
                 )}
                 <button 
-                  onClick={() => handleDelete(owner.id)}
+                  onClick={() => handleDelete(owner.user_id)}
                   style={{ padding: '8px 15px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
                 >
                   Delete
