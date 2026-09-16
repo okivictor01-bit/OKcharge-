@@ -29,18 +29,35 @@ export default function LoginPage() {
 
     // Get user's role from profile
     if (data.user) {
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, status')
         .eq('user_id', data.user.id)
         .single();
 
+      if (profileError || !profile) {
+        setError('Profile not found. Please contact support.');
+        setLoading(false);
+        return;
+      }
+
+      // Check if account is approved
+      if (profile.status !== 'approved') {
+        setError('Your account is pending approval. Please wait for admin approval.');
+        await supabase.auth.signOut();
+        setLoading(false);
+        return;
+      }
+
       // Redirect based on role
-      if (profile?.role === 'staff') {
+      if (profile.role === 'staff') {
         router.push('/staff/dashboard');
-      } else if (profile?.role === 'admin') {
+      } else if (profile.role === 'admin') {
         router.push('/admin/dashboard');
+      } else if (profile.role === 'owner') {
+        router.push('/owner/dashboard');
       } else {
+        // Default to owner dashboard
         router.push('/owner/dashboard');
       }
     }
@@ -48,7 +65,9 @@ export default function LoginPage() {
 
   return (
     <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '400px', margin: '50px auto' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '30px' }}>Login to OKcharge</h1>
+      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+        <h1 style={{ fontSize: '28px', marginBottom: '10px' }}>Login to OKcharge</h1>
+      </div>
       
       <form onSubmit={handleLogin} style={{ display: 'grid', gap: '15px' }}>
         <input 
@@ -74,22 +93,19 @@ export default function LoginPage() {
       </form>
 
       {error && (
-        <p style={{ textAlign: 'center', marginTop: '20px', color: 'red' }}>
+        <p style={{ textAlign: 'center', marginTop: '20px', color: '#ef4444', fontSize: '14px' }}>
           {error}
         </p>
       )}
 
       <div style={{ textAlign: 'center', marginTop: '30px' }}>
-        <a href="/auth/staff-register" style={{ color: '#2563eb', fontSize: '14px' }}>Create Staff Account</a>
+        <p style={{ fontSize: '14px', color: '#64748b' }}>
+          Don't have an account? <a href="/auth/register" style={{ color: '#2563eb' }}>Register as Partner</a>
+        </p>
+        <p style={{ fontSize: '14px', color: '#64748b', marginTop: '10px' }}>
+          <a href="/auth/admin-login" style={{ color: '#7c3aed' }}>Admin Login</a>
+        </p>
       </div>
-      <div style={{ textAlign: 'center', marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #e2e8f0' }}>
-  <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '10px' }}>Other login options:</p>
-  <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-    <a href="/auth/admin-login" style={{ color: '#7c3aed', fontSize: '13px' }}>Admin Login</a>
-    <span style={{ color: '#cbd5e1' }}>•</span>
-    <a href="/auth/staff-register" style={{ color: '#2563eb', fontSize: '13px' }}>Staff Registration</a>
-  </div>
-</div>
     </main>
   );
 }
