@@ -1,289 +1,149 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [stats, setStats] = useState({ 
-    totalRevenue: 0, 
-    activeRentals: 0, 
-    totalLocations: 0, 
-    totalPowerBanks: 0, 
-    availablePowerBanks: 0,
-    platformShare: 0,
-    okchargeOwnedPB: 0,
-    ownerOwnedPB: 0
-  });
-  const [allTransactions, setAllTransactions] = useState<any[]>([]);
-  const [filteredTransactions, setFilteredTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [chartData, setChartData] = useState<{ day: string; revenue: number }[]>([]);
-
-  const [filterType, setFilterType] = useState<'today' | 'date' | 'range'>('today');
-  const [singleDate, setSingleDate] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [stats, setStats] = useState({
+    totalLocations: 0,
+    totalOwners: 0,
+    totalPowerBanks: 0,
+    activeRentals: 0,
+    totalRevenue: 0
+  });
 
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    setSingleDate(today); setStartDate(today); setEndDate(today);
-    fetchDashboardData();
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        router.push('/auth/admin-login');
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profile?.role !== 'admin') {
+        router.push('/auth/login');
+        return;
+      }
+
+      // Load stats
+      await loadStats();
+      setLoading(false);
+    };
+
+    checkAuth();
   }, []);
+
+  const loadStats = async () => {
+    const { count: locationsCount } = await supabase.from('locations').select('*', { count: 'exact', head: true });
+    const { count: ownersCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'owner');
+    const { count: powerBanksCount } = await supabase.from('power_banks').select('*', { count: 'exact', head: true });
+    const { count: activeCount } = await supabase.from('rentals').select('*', { count: 'exact', head: true }).eq('status', 'active');
+
+    setStats({
+      totalLocations: locationsCount || 0,
+      totalOwners: ownersCount || 0,
+      totalPowerBanks: powerBanksCount || 0,
+      activeRentals: activeCount || 0,
+      totalRevenue: 0
+    });
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/auth/admin-login');
   };
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    const { count: locationsCount } = await supabase.from('locations').select('*', { count: 'exact', head: true });
-    const { data: pbData } = await supabase.from('power_banks').select('status, ownership_type');
-    const { data: rentalsData } = await supabase
-      .from('rentals')
-      .select('amount_paid, status, ticket_code, customer_name, created_at, locations(name), power_bank_ownership_type, platform_amount')
-      .order('created_at', { ascending: false });
-
-    const totalPB = pbData?.length || 0;
-    const availablePB = pbData?.filter((pb: any) => pb.status === 'available').length || 0;
-    const okchargeOwnedPB = pbData?.filter((pb: any) => pb.ownership_type === 'okcharge').length || 0;
-    const ownerOwnedPB = pbData?.filter((pb: any) => pb.ownership_type === 'owner').length || 0;
-    
-    setStats({ 
-      totalRevenue: 0, 
-      activeRentals: 0, 
-      totalLocations: locationsCount || 0, 
-      totalPowerBanks: totalPB, 
-      availablePowerBanks: availablePB,
-      platformShare: 0,
-      okchargeOwnedPB,
-      ownerOwnedPB
-    });
-    setAllTransactions(rentalsData || []);
-    
-    generateChartData(rentalsData || []);
-    applyFilters(rentalsData || []);
-    setLoading(false);
-  };
-
-  const generateChartData = (transactions: any[]) => {
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      return d.toISOString().split('T')[0];
-    }).reverse();
-
-    const chart = last7Days.map(date => {
-      const dayRevenue = transactions
-        .filter((t: any) => t.created_at.startsWith(date) && ['completed', 'paid', 'active'].includes(t.status))
-        .reduce((sum: number, t: any) => {
-          let share = 0;
-          if (t.platform_amount !== undefined && t.platform_amount !== null) {
-            share = Number(t.platform_amount);
-          } else {
-            const split = t.power_bank_ownership_type === 'owner' ? 25 : 60;
-            share = (t.amount_paid || 0) * (split / 100);
-          }
-          return sum + share;
-        }, 0);
-      
-      const dayName = new Date(date).toLocaleDateString('en-NG', { weekday: 'short' });
-      return { day: dayName, revenue: dayRevenue, fullDate: date };
-    });
-    setChartData(chart);
-  };
-
-  const applyFilters = (transactions: any[]) => {
-    let filtered = transactions;
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    if (filterType === 'today') {
-      filtered = transactions.filter((t: any) => new Date(t.created_at) >= todayStart);
-    } else if (filterType === 'date' && singleDate) {
-      const sd = new Date(singleDate); sd.setHours(0,0,0,0); const nd = new Date(sd); nd.setDate(nd.getDate()+1);
-      filtered = transactions.filter((t: any) => { const c = new Date(t.created_at); return c >= sd && c < nd; });
-    } else if (filterType === 'range' && startDate && endDate) {
-      const st = new Date(startDate); st.setHours(0,0,0,0); const en = new Date(endDate); en.setHours(23,59,59,999);
-      filtered = transactions.filter((t: any) => { const c = new Date(t.created_at); return c >= st && c <= en; });
-    }
-
-    setFilteredTransactions(filtered);
-    let periodRevenue = 0, periodActive = 0, periodPlatformShare = 0;
-    
-    filtered.forEach((t: any) => {
-      if (['paid', 'active', 'completed'].includes(t.status)) {
-        periodRevenue += t.amount_paid || 0;
-        
-        if (t.platform_amount !== undefined && t.platform_amount !== null) {
-          periodPlatformShare += Number(t.platform_amount);
-        } else {
-          const split = t.power_bank_ownership_type === 'owner' ? 25 : 60;
-          periodPlatformShare += (t.amount_paid || 0) * (split / 100);
-        }
-      }
-      if (t.status === 'active') periodActive += 1;
-    });
-    
-    setStats(prev => ({ 
-      ...prev, 
-      totalRevenue: periodRevenue, 
-      activeRentals: periodActive,
-      platformShare: periodPlatformShare
-    }));
-  };
-
-  useEffect(() => { if (allTransactions.length > 0) applyFilters(allTransactions); }, [filterType, singleDate, startDate, endDate]);
-
-  const formatDate = (d: string) => new Date(d).toLocaleDateString('en-NG', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-  const getFilterLabel = () => filterType === 'today' ? "Today's Earnings" : filterType === 'date' ? `Earnings for ${singleDate}` : `Earnings (${startDate} to ${endDate})`;
-
-  if (loading) return <main style={{ padding: '20px', textAlign: 'center' }}>Loading dashboard data...</main>;
-
-  const maxChartRevenue = Math.max(...chartData.map(d => d.revenue), 1000);
-
-  const navButtonStyle: React.CSSProperties = {
-    display: 'block',
-    width: '100%',
-    padding: '15px 20px',
-    marginBottom: '10px',
-    backgroundColor: 'white',
-    border: '1px solid #e2e8f0',
-    borderRadius: '10px',
-    textDecoration: 'none',
-    color: '#0f172a',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    textAlign: 'left' as const,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-    boxSizing: 'border-box'
-  };
+  if (loading) return <div style={{ padding: '20px' }}>Loading...</div>;
 
   return (
-    <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '900px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-        <h1 style={{ fontSize: '24px', margin: 0 }}>Admin Dashboard</h1>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <a href="/admin" style={{ backgroundColor: '#2563eb', color: 'white', padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', fontSize: '14px', fontWeight: 'bold' }}>+ Add Location</a>
-          <button onClick={handleLogout} style={{ backgroundColor: '#ef4444', color: 'white', padding: '10px 15px', borderRadius: '8px', border: 'none', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}>Logout</button>
-        </div>
+    <main style={{ fontFamily: 'sans-serif', backgroundColor: '#f8fafc', minHeight: '100vh', padding: '20px' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+        <h1 style={{ margin: 0, fontSize: '28px', color: '#0f172a' }}>Admin Dashboard</h1>
+        <button onClick={handleLogout} style={{ padding: '10px 20px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Logout</button>
       </div>
 
-      {/* Quick Navigation */}
-      <div style={{ marginBottom: '25px' }}>
-        <h2 style={{ fontSize: '18px', marginBottom: '12px', color: '#475569' }}>Quick Actions</h2>
-        <a href="/admin/locations" style={navButtonStyle}>📍 Manage Locations <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>{stats.totalLocations} total →</span></a>
-        <a href="/admin/owners" style={navButtonStyle}>👤 Manage Owners <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>→</span></a>
-        <a href="/admin/staff" style={navButtonStyle}>👥 Manage Staff <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>→</span></a>
-        <a href="/admin/powerbanks" style={navButtonStyle}>🔋 Manage Power Banks <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>{stats.okchargeOwnedPB} OKcharge / {stats.ownerOwnedPB} Owner →</span></a>
-        <a href="/admin/print-qr" style={navButtonStyle}>🖨️ Print QR Codes <span style={{ float: 'right', color: '#64748b', fontWeight: 'normal' }}>→</span></a>
-      </div>
-
-      {/* 7-Day Analytics Chart (Shows Platform Earnings) */}
-      <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '25px' }}>
-        <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}> Platform Revenue Trend (Last 7 Days)</h2>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '150px', gap: '10px' }}>
-          {chartData.map((data, idx) => (
-            <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%' }}>
-              <span style={{ fontSize: '11px', color: '#64748b', marginBottom: '5px' }}>₦{(data.revenue/1000).toFixed(1)}k</span>
-              <div style={{ 
-                width: '100%', 
-                maxWidth: '40px', 
-                backgroundColor: '#10b981', 
-                borderRadius: '4px 4px 0 0', 
-                height: `${Math.max((data.revenue / maxChartRevenue) * 100, 2)}%`,
-                transition: 'height 0.5s ease'
-              }}></div>
-              <span style={{ fontSize: '12px', color: '#475569', marginTop: '8px', fontWeight: 'bold' }}>{data.day}</span>
+      {/* Quick Actions */}
+      <div style={{ marginBottom: '30px' }}>
+        <h2 style={{ fontSize: '18px', marginBottom: '15px', color: '#475569' }}>Quick Actions</h2>
+        <div style={{ display: 'grid', gap: '15px' }}>
+          <div onClick={() => router.push('/admin/locations')} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <span style={{ fontSize: '24px' }}>📍</span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Manage Locations</h3>
+                <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#64748b' }}>{stats.totalLocations} total</p>
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px', marginBottom: '30px' }}>
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', borderLeft: '4px solid #10b981', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#64748b' }}>{getFilterLabel()}</p>
-          <h2 style={{ margin: 0, fontSize: '24px', color: '#0f172a' }}>₦{stats.platformShare.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</h2>
-          <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#10b981', fontWeight: 'bold' }}>Platform Share</p>
-        </div>
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', borderLeft: '4px solid #3b82f6', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#64748b' }}>Total Gross Revenue</p>
-          <h2 style={{ margin: 0, fontSize: '24px', color: '#0f172a' }}>₦{stats.totalRevenue.toLocaleString()}</h2>
-        </div>
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', borderLeft: '4px solid #8b5cf6', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#64748b' }}>Active Rentals</p>
-          <h2 style={{ margin: 0, fontSize: '24px', color: '#0f172a' }}>{stats.activeRentals}</h2>
-        </div>
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', borderLeft: '4px solid #f59e0b', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#64748b' }}>Total Locations</p>
-          <h2 style={{ margin: 0, fontSize: '24px', color: '#0f172a' }}>{stats.totalLocations}</h2>
-        </div>
-      </div>
-
-      {/* Filter Section */}
-      <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '25px' }}>
-        <h3 style={{ marginTop: 0, marginBottom: '15px' }}>Filter Transactions</h3>
-        <label style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', cursor: 'pointer' }}><input type="radio" value="today" checked={filterType === 'today'} onChange={(e) => setFilterType(e.target.value as any)} style={{ marginRight: '8px' }} /> Today</label>
-        <label style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', cursor: 'pointer' }}><input type="radio" value="date" checked={filterType === 'date'} onChange={(e) => setFilterType(e.target.value as any)} style={{ marginRight: '8px' }} /> Specific Date</label>
-        {filterType === 'date' && <input type="date" value={singleDate} onChange={(e) => setSingleDate(e.target.value)} style={{ width: '100%', padding: '12px', marginBottom: '15px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }} />}
-        <label style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', cursor: 'pointer' }}><input type="radio" value="range" checked={filterType === 'range'} onChange={(e) => setFilterType(e.target.value as any)} style={{ marginRight: '8px' }} /> Date Range</label>
-        {filterType === 'range' && (<div><input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ width: '100%', padding: '12px', marginBottom: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }} /><input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ width: '100%', padding: '12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }} /></div>)}
-      </div>
-
-      {/* Recent Transactions */}
-      <div style={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-        <div style={{ padding: '20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0, fontSize: '18px' }}>Transactions {filterType !== 'today' && <span style={{ fontSize: '14px', color: '#64748b', fontWeight: 'normal' }}>(Filtered)</span>}</h2>
-          <button onClick={fetchDashboardData} style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold' }}>🔄 Refresh</button>
-        </div>
-        {filteredTransactions.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>No transactions found for this period.</div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-              <thead style={{ backgroundColor: '#f8fafc' }}>
-                <tr>
-                  <th style={{ padding: '12px 15px', textAlign: 'left', color: '#64748b', fontWeight: '600' }}>Ticket</th>
-                  <th style={{ padding: '12px 15px', textAlign: 'left', color: '#64748b', fontWeight: '600' }}>Customer</th>
-                  <th style={{ padding: '12px 15px', textAlign: 'left', color: '#64748b', fontWeight: '600' }}>Location</th>
-                  <th style={{ padding: '12px 15px', textAlign: 'left', color: '#64748b', fontWeight: '600' }}>Total Amount</th>
-                  <th style={{ padding: '12px 15px', textAlign: 'left', color: '#64748b', fontWeight: '600' }}>Platform Share</th>
-                  <th style={{ padding: '12px 15px', textAlign: 'left', color: '#64748b', fontWeight: '600' }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTransactions.map((tx: any) => {
-                  const split = tx.power_bank_ownership_type === 'owner' ? 25 : 60;
-                  const platformAmt = tx.platform_amount !== undefined ? Number(tx.platform_amount) : (tx.amount_paid || 0) * (split / 100);
-                  
-                  return (
-                    <tr key={tx.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '12px 15px', fontWeight: 'bold', color: '#2563eb' }}>{tx.ticket_code}</td>
-                      <td style={{ padding: '12px 15px' }}>
-                        <div>{tx.customer_name || 'N/A'}</div>
-                        <div style={{ fontSize: '12px', color: '#94a3b8' }}>{formatDate(tx.created_at)}</div>
-                      </td>
-                      <td style={{ padding: '12px 15px', color: '#475569' }}>{tx.locations?.name || 'N/A'}</td>
-                      <td style={{ padding: '12px 15px', fontWeight: 'bold' }}>₦{(tx.amount_paid || 0).toLocaleString()}</td>
-                      <td style={{ padding: '12px 15px', color: '#0f172a', fontWeight: 'bold' }}>
-                        ₦{platformAmt.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                        <div style={{fontSize: '11px', color: '#64748b', fontWeight: 'normal'}}>
-                          ({split}% • {tx.power_bank_ownership_type === 'owner' ? 'Owner PB' : 'OKcharge PB'})
-                        </div>
-                      </td>
-                      <td style={{ padding: '12px 15px' }}>
-                        <span style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', backgroundColor: tx.status === 'completed' ? '#dcfce7' : tx.status === 'active' ? '#dbeafe' : '#fee2e2', color: tx.status === 'completed' ? '#15803d' : tx.status === 'active' ? '#1d4ed8' : '#b91c1c' }}>{tx.status.toUpperCase()}</span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <span style={{ color: '#94a3b8' }}>→</span>
           </div>
-        )}
+
+          <div onClick={() => router.push('/admin/owners')} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <span style={{ fontSize: '24px' }}>👤</span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Manage Owners</h3>
+                <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#64748b' }}>{stats.totalOwners} owners</p>
+              </div>
+            </div>
+            <span style={{ color: '#94a3b8' }}>→</span>
+          </div>
+
+          <div onClick={() => router.push('/staff/dashboard')} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <span style={{ fontSize: '24px' }}></span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Manage Staff</h3>
+                <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#64748b' }}>View & manage staff accounts</p>
+              </div>
+            </div>
+            <span style={{ color: '#94a3b8' }}>→</span>
+          </div>
+
+          <div onClick={() => router.push('/admin/powerbanks')} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <span style={{ fontSize: '24px' }}>🔋</span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Manage Power Banks</h3>
+                <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#64748b' }}>{stats.totalPowerBanks} power banks</p>
+              </div>
+            </div>
+            <span style={{ color: '#94a3b8' }}>→</span>
+          </div>
+
+          <div onClick={() => router.push('/admin/generate-qr')} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <span style={{ fontSize: '24px' }}>️</span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Print QR Codes</h3>
+                <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#64748b' }}>Generate & print QR codes</p>
+              </div>
+            </div>
+            <span style={{ color: '#94a3b8' }}>→</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '30px' }}>
+        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Active Rentals</p>
+          <h2 style={{ margin: '10px 0 0 0', fontSize: '32px', color: '#10b981' }}>{stats.activeRentals}</h2>
+        </div>
+        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Total Locations</p>
+          <h2 style={{ margin: '10px 0 0 0', fontSize: '32px', color: '#3b82f6' }}>{stats.totalLocations}</h2>
+        </div>
       </div>
     </main>
   );
