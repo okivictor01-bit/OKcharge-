@@ -50,6 +50,8 @@ function RentalTimer({ startedAt, durationHours }: { startedAt: string; duration
 function DashboardContent() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [ownerName, setOwnerName] = useState('');
+  const [ownerLocations, setOwnerLocations] = useState<any[]>([]);
   const [rentals, setRentals] = useState<any[]>([]);
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [activeRentals, setActiveRentals] = useState(0);
@@ -62,23 +64,63 @@ function DashboardContent() {
   const loadDashboardData = async () => {
     setLoading(true);
     
-    const { data, error } = await supabase
+    // Step 1: Get the current logged-in user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      router.push('/auth/login');
+      return;
+    }
+
+    // Step 2: Get the owner's profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('user_id', user.id)
+      .single();
+
+    if (profile) setOwnerName(profile.full_name || 'Owner');
+
+    // Step 3: Get all locations owned by this user
+    const { data: locations } = await supabase
+      .from('locations')
+      .select('id, name, location_code')
+      .eq('owner_id', user.id);
+
+    if (!locations || locations.length === 0) {
+      // No locations yet - show empty dashboard
+      setOwnerLocations([]);
+      setRentals([]);
+      setTotalEarnings(0);
+      setActiveRentals(0);
+      setLoading(false);
+      return;
+    }
+
+    setOwnerLocations(locations);
+    const locationIds = locations.map(loc => loc.id);
+
+    // Step 4: Get rentals ONLY for this owner's locations
+    const { data: rentalsData, error } = await supabase
       .from('rentals')
       .select('*')
+      .in('location_id', locationIds)
       .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error loading rentals:', error);
-    } else if (data) {
-      setRentals(data);
+    } else if (rentalsData) {
+      setRentals(rentalsData);
       
-      const earnings = data
+      // Calculate earnings (50% of completed/active rentals)
+      const earnings = rentalsData
         .filter(r => r.status === 'returned' || r.status === 'active')
         .reduce((sum, r) => sum + (r.amount_paid * 0.5), 0);
       
       setTotalEarnings(earnings);
       
-      const active = data.filter(r => r.status === 'active').length;
+      // Count active rentals
+      const active = rentalsData.filter(r => r.status === 'active').length;
       setActiveRentals(active);
     }
     
@@ -99,7 +141,12 @@ function DashboardContent() {
       {/* Header */}
       <div style={{ marginBottom: '30px' }}>
         <h1 style={{ margin: 0, fontSize: '24px', color: '#0f172a' }}>Owner Dashboard</h1>
-        <p style={{ margin: '5px 0 0 0', color: '#64748b' }}>Welcome back!</p>
+        <p style={{ margin: '5px 0 0 0', color: '#64748b' }}>Welcome back, {ownerName}!</p>
+        {ownerLocations.length > 0 && (
+          <p style={{ margin: '5px 0 0 0', fontSize: '13px', color: '#94a3b8' }}>
+            Locations: {ownerLocations.map(l => l.name).join(', ')}
+          </p>
+        )}
       </div>
 
       {/* Earnings Cards */}
@@ -116,7 +163,7 @@ function DashboardContent() {
 
       {/* Active Rentals with Live Timers */}
       <div style={{ marginBottom: '30px' }}>
-        <h3 style={{ fontSize: '18px', color: '#0f172a', marginBottom: '15px' }}>🔋 Active Rentals (Live Timer)</h3>
+        <h3 style={{ fontSize: '18px', color: '#0f172a', marginBottom: '15px' }}> Active Rentals (Live Timer)</h3>
         {rentals.filter(r => r.status === 'active').length === 0 ? (
           <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', textAlign: 'center', color: '#64748b' }}>
             No power banks currently rented out.
@@ -153,7 +200,9 @@ function DashboardContent() {
         
         {filteredRentals.length === 0 ? (
           <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', textAlign: 'center', color: '#64748b' }}>
-            No transactions yet.
+            {ownerLocations.length === 0 
+              ? "You don't have any locations yet. Contact admin to get started!" 
+              : "No transactions yet."}
           </div>
         ) : (
           <div style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
