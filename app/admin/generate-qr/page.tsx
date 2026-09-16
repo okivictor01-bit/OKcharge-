@@ -16,12 +16,15 @@ export default function GenerateQRPage() {
   const [selectedLocId, setSelectedLocId] = useState('');
   const [generatedPbQR, setGeneratedPbQR] = useState('');
 
+  // Load locations on mount
   useEffect(() => {
-    // Load locations for the dropdown
-    supabase.from('locations').select('id, name').then(({ data }) => {
-      if (data) setLocations(data);
-    });
+    fetchLocations();
   }, []);
+
+  const fetchLocations = async () => {
+    const { data } = await supabase.from('locations').select('id, name, location_code').order('created_at', { ascending: false });
+    if (data) setLocations(data);
+  };
 
   const handleCreateLocation = async () => {
     if (!locCode || !locName) return alert('Code and Name are required');
@@ -37,6 +40,8 @@ export default function GenerateQRPage() {
       // Generate QR URL
       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://okcharge.pages.dev/rent?location=${locCode}`;
       setGeneratedLocQR(qrUrl);
+      // Refresh the dropdown list immediately
+      fetchLocations();
     }
   };
 
@@ -54,6 +59,9 @@ export default function GenerateQRPage() {
       // Generate QR URL
       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://okcharge.pages.dev/owner/pb?code=${pbCode}`;
       setGeneratedPbQR(qrUrl);
+      // Clear the form
+      setPbCode('');
+      setSelectedLocId('');
     }
   };
 
@@ -91,7 +99,7 @@ export default function GenerateQRPage() {
         <select value={selectedLocId} onChange={e => setSelectedLocId(e.target.value)} style={inputStyle}>
           <option value="">Select Location...</option>
           {locations.map(loc => (
-            <option key={loc.id} value={loc.id}>{loc.name}</option>
+            <option key={loc.id} value={loc.id}>{loc.name} ({loc.location_code})</option>
           ))}
         </select>
 
