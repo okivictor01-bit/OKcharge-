@@ -40,7 +40,7 @@ function PowerBanksContent() {
       .select('*')
       .eq('owner_id', ownerId);
 
-    if (locationsData) setLocations(locationsData);
+    if (locationsData) setLocations(locationsData || []);
 
     // Get power banks for owner's locations
     if (locationsData && locationsData.length > 0) {
@@ -121,18 +121,40 @@ function PowerBanksContent() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <div>
           <h1 style={{ fontSize: '24px', margin: '0 0 5px 0' }}>Power Banks for {ownerName}</h1>
-          <p style={{ color: '#64748b', margin: 0 }}>{powerBanks.length} power bank(s)</p>
+          <p style={{ color: '#64748b', margin: 0 }}>{powerBanks.length} power bank(s) • {locations.length} location(s)</p>
         </div>
         <button 
-          onClick={() => setShowAddModal(true)}
-          style={{ padding: '10px 20px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+          onClick={() => locations.length > 0 ? setShowAddModal(true) : alert('Please create a location first before adding power banks.')}
+          style={{ 
+            padding: '10px 20px', 
+            backgroundColor: locations.length > 0 ? '#10b981' : '#94a3b8', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '8px', 
+            cursor: locations.length > 0 ? 'pointer' : 'not-allowed', 
+            fontWeight: 'bold' 
+          }}
         >
           + Add Power Bank
         </button>
       </div>
 
+      {/* Show message if no locations */}
+      {locations.length === 0 && (
+        <div style={{ backgroundColor: '#fef3c7', padding: '20px', borderRadius: '12px', border: '2px solid #f59e0b', marginBottom: '20px', textAlign: 'center' }}>
+          <p style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: 'bold', color: '#b45309' }}>⚠️ No Locations Found</p>
+          <p style={{ margin: '0 0 15px 0', color: '#92400e' }}>You need to create at least one location before adding power banks.</p>
+          <button 
+            onClick={() => router.push(`/admin/generate-qr`)}
+            style={{ padding: '10px 20px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+          >
+             Create Location Now
+          </button>
+        </div>
+      )}
+
       {/* Add Power Bank Modal */}
-      {showAddModal && (
+      {showAddModal && locations.length > 0 && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', maxWidth: '400px', width: '90%' }}>
             <h2 style={{ marginBottom: '20px' }}>Add New Power Bank</h2>
@@ -168,7 +190,11 @@ function PowerBanksContent() {
       {powerBanks.length === 0 ? (
         <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', textAlign: 'center', color: '#64748b' }}>
           <p style={{ fontSize: '18px', marginBottom: '10px' }}>No power banks yet</p>
-          <p style={{ fontSize: '14px' }}>Click "Add Power Bank" to create one</p>
+          {locations.length > 0 ? (
+            <p style={{ fontSize: '14px' }}>Click "Add Power Bank" to create one</p>
+          ) : (
+            <p style={{ fontSize: '14px' }}>Create a location first to get started</p>
+          )}
         </div>
       ) : (
         <div style={{ display: 'grid', gap: '15px' }}>
