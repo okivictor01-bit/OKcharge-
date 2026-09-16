@@ -12,7 +12,6 @@ export default function AdminDashboard() {
     totalOwners: 0,
     totalPowerBanks: 0,
     activeRentals: 0,
-    totalRevenue: 0
   });
 
   useEffect(() => {
@@ -53,7 +52,6 @@ export default function AdminDashboard() {
       totalOwners: ownersCount || 0,
       totalPowerBanks: powerBanksCount || 0,
       activeRentals: activeCount || 0,
-      totalRevenue: 0
     });
   };
 
@@ -121,12 +119,24 @@ export default function AdminDashboard() {
             <span style={{ color: '#94a3b8' }}>→</span>
           </div>
 
+          {/* NEW: Generate QR Codes Button */}
+          <div onClick={() => router.push('/admin/generate-qr')} style={{ backgroundColor: '#f0f9ff', padding: '20px', borderRadius: '12px', border: '2px solid #3b82f6', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <span style={{ fontSize: '24px' }}></span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', color: '#1e3a8a' }}>Generate QR Codes</h3>
+                <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#3b82f6' }}>Create new location & power bank codes</p>
+              </div>
+            </div>
+            <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>→</span>
+          </div>
+
           <div onClick={() => router.push('/admin/print-all-qr')} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <span style={{ fontSize: '24px' }}>🖨️</span>
+              <span style={{ fontSize: '24px' }}>️</span>
               <div>
                 <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Print All QR Codes</h3>
-                <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#64748b' }}>Generate & print all QR codes</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#64748b' }}>Print all codes on A4 paper</p>
               </div>
             </div>
             <span style={{ color: '#94a3b8' }}>→</span>
