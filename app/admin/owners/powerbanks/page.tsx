@@ -110,15 +110,14 @@ function PowerBanksContent() {
     }
   };
 
-  // NEW: Print all QR codes for this location on A4
   const handlePrintAll = () => {
     if (powerBanks.length === 0) {
       alert('No power banks to print');
       return;
     }
 
-    const locationName = locations[0]?.name || 'Location';
-    const locationCode = locations[0]?.location_code || '';
+    const locationName = locations.length > 0 ? locations[0]?.name : 'Location';
+    const locationCode = locations.length > 0 ? locations[0]?.location_code : '';
 
     const qrItems = powerBanks.map(pb => {
       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://okcharge.pages.dev/owner/pb?code=${pb.pb_code}`;
@@ -235,7 +234,6 @@ function PowerBanksContent() {
           <p style={{ color: '#64748b', margin: 0 }}>{powerBanks.length} power bank(s) • {locations.length} location(s)</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          {/* NEW: Print All Button */}
           <button 
             onClick={handlePrintAll}
             disabled={powerBanks.length === 0}
@@ -284,4 +282,62 @@ function PowerBanksContent() {
       )}
 
       {powerBanks.length === 0 ? (
-        <div style={{ backgroundColor: 'white', padding: '40px', borderRadius
+        <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', textAlign: 'center', color: '#64748b' }}>
+          <p style={{ fontSize: '18px', marginBottom: '10px' }}>No power banks yet</p>
+          {locations.length > 0 ? (
+            <p style={{ fontSize: '14px' }}>Click "Add Power Bank" to create one</p>
+          ) : (
+            <p style={{ fontSize: '14px' }}>Create a location first to get started</p>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: '15px' }}>
+          {powerBanks.map((pb: any) => (
+            <div key={pb.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: '0 0 5px 0', fontSize: '18px' }}>{pb.pb_code}</h3>
+                <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>
+                  {pb.locations?.name || 'No location'} ({pb.locations?.location_code || '---'})
+                </p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>
+                  Status: <span style={{ 
+                    padding: '2px 8px', 
+                    borderRadius: '4px', 
+                    backgroundColor: pb.status === 'available' ? '#dcfce7' : '#fef3c7',
+                    color: pb.status === 'available' ? '#15803d' : '#b45309',
+                    fontWeight: 'bold'
+                  }}>
+                    {pb.status.toUpperCase()}
+                  </span>
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={() => handlePrintSingle(pb.pb_code)} style={{ padding: '8px 15px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                  🖨️ Print
+                </button>
+                <button onClick={() => handleDelete(pb.id)} style={{ padding: '8px 15px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ marginTop: '30px', textAlign: 'center' }}>
+        <a href="/admin/owners" style={{ color: '#2563eb', textDecoration: 'none' }}>← Back to Owners</a>
+      </div>
+    </main>
+  );
+}
+
+export default function OwnerPowerBanksPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '20px' }}>Loading...</div>}>
+      <PowerBanksContent />
+    </Suspense>
+  );
+}
+
+const inputStyle = { padding: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px', width: '100%', boxSizing: 'border-box' as const };
+const btnStyle = { padding: '12px', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' };
