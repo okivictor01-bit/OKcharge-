@@ -17,23 +17,11 @@ function RentContent() {
   const [selectedDuration, setSelectedDuration] = useState("1");
   const [ownerSubaccount, setOwnerSubaccount] = useState<string | null>(null);
   const [locationId, setLocationId] = useState<string | null>(null);
-  const [paymentReference, setPaymentReference] = useState("");
-  const [ticketCode, setTicketCode] = useState("");
 
   const prices: Record<string, number> = { "1": 100, "3": 250, "5": 400, "24": 900 };
   const currentPrice = prices[duration] || 100;
 
   useEffect(() => {
-    // Check if user is returning from payment
-    const returningRef = localStorage.getItem("okcharge_payment_ref");
-    const returningTicket = localStorage.getItem("okcharge_ticket");
-    if (returningRef && returningTicket) {
-      // Clear and redirect
-      localStorage.removeItem("okcharge_payment_ref");
-      localStorage.removeItem("okcharge_ticket");
-      window.location.href = `/rent/success?ref=${returningRef}&ticket=${returningTicket}`;
-    }
-
     let attempts = 0;
     const script = document.createElement("script");
     script.src = "https://js.paystack.co/v1/inline.js";
@@ -89,9 +77,6 @@ function RentContent() {
     setLoading(true);
     const reference = `OKCHARGE_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const ticket = `TKT-${Math.floor(100000 + Math.random() * 900000)}`;
-    
-    setPaymentReference(reference);
-    setTicketCode(ticket);
 
     const currentFormData = { ...formData };
     const currentPriceValue = currentPrice;
@@ -139,9 +124,7 @@ function RentContent() {
 
     function onPaymentSuccess(response: any) {
       console.log("Payment successful:", response);
-      localStorage.setItem("okcharge_payment_ref", response.reference);
-      localStorage.setItem("okcharge_ticket", ticket);
-      
+      // Update status to paid
       supabase.from("rentals")
         .update({ status: "paid" })
         .eq("paystack_reference", response.reference)
@@ -154,25 +137,11 @@ function RentContent() {
       console.log("Payment window closed");
       setLoading(false);
       
-      // Save to localStorage for recovery
-      localStorage.setItem("okcharge_payment_ref", reference);
-      localStorage.setItem("okcharge_ticket", ticket);
-      
-      // Show confirmation dialog
+      // ALWAYS redirect to success page for verification after 2 seconds
+      // The success page will verify with Paystack if payment succeeded
       setTimeout(() => {
-        const confirmed = window.confirm(
-          "Payment window closed.\n\nDid you complete your payment successfully?\n\nClick OK if YES, Cancel if NO."
-        );
-        
-        if (confirmed) {
-          // User says they paid - redirect to verification page
-          window.location.href = `/rent/success?ref=${reference}&ticket=${ticket}`;
-        } else {
-          // User says they didn't pay - clean up
-          localStorage.removeItem("okcharge_payment_ref");
-          localStorage.removeItem("okcharge_ticket");
-        }
-      }, 1000);
+        window.location.href = `/rent/success?ref=${reference}&ticket=${ticket}`;
+      }, 2000);
     }
 
     try {
@@ -279,7 +248,7 @@ function RentContent() {
               fontWeight: "600"
             }}
           >
-            🔧 Having issues? Recover payment manually
+             Having issues? Recover payment manually
           </button>
         </div>
       </div>
