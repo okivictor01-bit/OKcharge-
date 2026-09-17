@@ -49,7 +49,7 @@ function RentContent() {
             supabase
               .from("profiles")
               .select("paystack_subaccount_code")
-              .eq("id", locData.owner_id)
+              .eq("user_id", locData.owner_id) // Fixed: should be user_id, not id
               .single()
               .then(({ data: ownerData }) => {
                 if (ownerData?.paystack_subaccount_code) {
@@ -78,7 +78,26 @@ function RentContent() {
     const currentPriceValue = currentPrice;
     const currentDuration = duration;
     const currentLocationId = locationId;
-    const currentSubaccount = ownerSubaccount;
+
+    // 1. SAVE RENTAL AS "PENDING" FIRST (Bulletproof mobile fix)
+    const { error: insertError } = await supabase.from("rentals").insert({
+      ticket_code: ticketCode,
+      customer_name: currentFormData.name,
+      customer_phone: currentFormData.phone,
+      duration_hours: parseInt(currentDuration),
+      amount_paid: currentPriceValue,
+      paystack_reference: reference,
+      status: "pending",
+      started_at: new Date().toISOString(),
+      location_id: currentLocationId
+    });
+
+    if (insertError) {
+      setLoading(false);
+      alert("Failed to initialize rental. Please try again.");
+      console.error("Database error:", insertError);
+      return;
+    }
 
     const customerEmail = (currentFormData.email && currentFormData.email.includes('@')) 
       ? currentFormData.email 
@@ -86,56 +105,23 @@ function RentContent() {
 
     function onPaymentSuccess(response: any) {
       console.log("Payment successful:", response);
-      saveRentalAndRedirect(response.reference, ticketCode);
-    }
-
-    function saveRentalAndRedirect(ref: string, ticket: string) {
-      supabase.from("rentals").insert({
-        ticket_code: ticket,
-        customer_name: currentFormData.name,
-        customer_phone: currentFormData.phone,
-        duration_hours: parseInt(currentDuration),
-        amount_paid: currentPriceValue,
-        paystack_reference: ref,
-        status: "paid",
-        started_at: new Date().toISOString(),
-        location_id: currentLocationId
-      }).then(({ error }) => {
-        if (error) {
-          console.error("Database error:", error);
-          alert(`Payment successful but save failed: ${error.message}\nTicket: ${ticket}`);
-        }
-        window.location.href = `/rent/success?ref=${ref}&ticket=${ticket}`;
-      });
+      // Update status to paid
+      supabase.from("rentals")
+        .update({ status: "paid" })
+        .eq("paystack_reference", response.reference)
+        .then(() => {
+          window.location.href = `/rent/success?ref=${response.reference}&ticket=${ticketCode}`;
+        });
     }
 
     function onPaymentClose() {
       console.log("Payment window closed");
       setLoading(false);
       
-      // SAFETY NET: Check if payment actually succeeded despite the close
-      const checkStatus = window.confirm("Payment window closed. Did you complete the payment successfully?");
-      
-      if (checkStatus) {
-        setLoading(true);
-        // Search for the most recent paid rental for this phone number
-        supabase.from("rentals")
-          .select("*")
-          .eq("customer_phone", currentFormData.phone)
-          .eq("status", "paid")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single()
-          .then(({ data, error }) => {
-            setLoading(false);
-            if (data && !error) {
-              alert("Payment found! Redirecting to your ticket...");
-              window.location.href = `/rent/success?ref=${data.paystack_reference}&ticket=${data.ticket_code}`;
-            } else {
-              alert("We could not find a successful payment in our system. If money was deducted from your account, please contact support immediately with your phone number: " + currentFormData.phone);
-            }
-          });
-      }
+      // On mobile, bank redirects often trigger onClose instead of callback.
+      // Since we already saved the rental as "pending", we redirect to the 
+      // success page, which will verify the payment with Paystack automatically.
+      window.location.href = `/rent/success?ref=${reference}&ticket=${ticketCode}`;
     }
 
     try {
@@ -148,10 +134,11 @@ function RentContent() {
         amount: currentPriceValue * 100,
         currency: "NGN",
         ref: reference,
+        callback_url: "https://okcharge.pages.dev/rent/success", // Explicit redirect URL
         firstname: currentFormData.name.split(" ")[0],
         lastname: currentFormData.name.split(" ").slice(1).join(" ") || "",
         phone: currentFormData.phone,
-        subaccount: currentSubaccount || undefined, 
+        subaccount: ownerSubaccount || undefined, 
         transaction_charge: 0,
         bearer: "account",
         metadata: {
@@ -176,7 +163,7 @@ function RentContent() {
   return (
     <main style={{ fontFamily: "sans-serif", backgroundColor: "#f1f5f9", minHeight: "100vh", paddingBottom: "120px" }}>
       <div style={{ background: "linear-gradient(135deg, #0f172a, #1e293b)", color: "white", padding: "30px 20px", textAlign: "center", borderBottomLeftRadius: "30px", borderBottomRightRadius: "30px" }}>
-        <div style={{ fontSize: "40px", marginBottom: "10px" }}></div>
+        <div style={{ fontSize: "40px", marginBottom: "10px" }}>🔋</div>
         <h1 style={{ margin: 0, fontSize: "24px", fontWeight: "700" }}>Complete Your Rental</h1>
       </div>
 
@@ -188,7 +175,7 @@ function RentContent() {
               <button key={time} onClick={() => { setDuration(time); setSelectedDuration(time); }}
                 style={{ padding: "20px 15px", borderRadius: "16px", border: selectedDuration === time ? "2px solid #10b981" : "2px solid #e2e8f0", backgroundColor: selectedDuration === time ? "#ecfdf5" : "white", cursor: "pointer" }}>
                 <div style={{ fontWeight: "700", color: selectedDuration === time ? "#0f172a" : "#64748b", fontSize: "17px", marginBottom: "5px" }}>{time} Hour{time !== "1" ? "s" : ""}</div>
-                <div style={{ color: selectedDuration === time ? "#10b981" : "#94a3b8", fontWeight: "800", fontSize: "18px" }}>{price}</div>
+                <div style={{ color: selectedDuration === time ? "#10b981" : "#94a3b8", fontWeight: "800", fontSize: "18px" }}>₦{price}</div>
               </button>
             ))}
           </div>
