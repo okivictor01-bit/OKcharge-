@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
@@ -58,7 +60,6 @@ export async function GET(request: NextRequest) {
 
     // 6. Update the owner's wallet balance (if owner exists)
     if (location?.owner_id) {
-      // First, get current balance
       const { data: ownerProfile } = await supabase
         .from('profiles')
         .select('wallet_balance, total_earnings')
