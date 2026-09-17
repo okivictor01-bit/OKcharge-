@@ -38,7 +38,7 @@ export default function ManageLocationsPage() {
       setLocations(locationsData);
     }
 
-    // Get all owners - only those with valid auth accounts
+    // Get only valid owners with real auth accounts
     const { data: ownersData, error: ownersError } = await supabase
       .from('profiles')
       .select('user_id, full_name, role, status')
@@ -48,13 +48,14 @@ export default function ManageLocationsPage() {
     if (ownersError) {
       console.error('Error loading owners:', ownersError);
     } else if (ownersData) {
-      // Double-check: filter out any with NULL or invalid user_ids
+      // Filter out any invalid user_ids
       const validOwners = ownersData.filter(owner => 
         owner.user_id && 
-        owner.user_id !== '00000000-0000-0000-0000-000000000000' &&
-        owner.user_id !== '11111111-1111-1111-1111-111111111111'
+        owner.user_id.length === 36 && // UUID format
+        !owner.user_id.includes('00000000') &&
+        !owner.user_id.includes('11111111')
       );
-      console.log('Valid owners:', validOwners);
+      console.log('Valid owners loaded:', validOwners.length, validOwners);
       setOwners(validOwners);
     } else {
       console.log('No owners data returned');
@@ -128,31 +129,34 @@ export default function ManageLocationsPage() {
 
   const handleQuickAssign = async (locationId: string, ownerId: string) => {
     try {
-      console.log('Assigning owner:', { locationId, ownerId, ownersCount: owners.length });
+      console.log('Assigning owner:', { locationId, ownerId });
+      console.log('Available owners:', owners);
       
+      // Validate the owner exists
       const ownerExists = owners.find(o => o.user_id === ownerId);
-      console.log('Owner exists in list:', ownerExists);
+      console.log('Owner found:', ownerExists);
       
       if (!ownerExists && ownerId) {
-        alert('Error: Selected owner not found. Please refresh the page and try again.');
+        alert('Error: This owner is not valid. Please refresh and try again.');
         return;
       }
 
+      // Convert empty string to null
       const ownerIdValue = ownerId === "" ? null : ownerId;
       
-      const { error } = await supabase
+      console.log('Updating location with owner_id:', ownerIdValue);
+      
+      const { data, error } = await supabase
         .from('locations')
         .update({ owner_id: ownerIdValue })
-        .eq('id', locationId);
+        .eq('id', locationId)
+        .select();
 
       if (error) {
         console.error('Supabase error:', error);
-        if (error.code === '23503') {
-          alert('Error: Foreign key constraint failed. The owner may have been deleted.');
-        } else {
-          alert('Error: ' + error.message);
-        }
+        alert('Error: ' + error.message);
       } else {
+        console.log('Update successful:', data);
         alert('Owner assigned successfully!');
         setQuickAssignId(null);
         loadData();
@@ -197,7 +201,12 @@ export default function ManageLocationsPage() {
       {/* Debug info */}
       <div style={{ backgroundColor: '#fef3c7', padding: '15px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px' }}>
         <strong>Debug:</strong> Loaded {locations.length} locations, {owners.length} owners
-        {owners.length === 0 && <div style={{ color: '#b91c1c', marginTop: '5px' }}>⚠️ No owners loaded! Check browser console.</div>}
+        {owners.length > 0 && (
+          <div style={{ color: '#15803d', marginTop: '5px' }}>
+            ✅ Owners: {owners.map(o => o.full_name).join(', ')}
+          </div>
+        )}
+        {owners.length === 0 && <div style={{ color: '#b91c1c', marginTop: '5px' }}>⚠️ No owners loaded!</div>}
       </div>
 
       {/* Stats */}
@@ -234,7 +243,7 @@ export default function ManageLocationsPage() {
                   
                   {location.address && (
                     <p style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#64748b' }}>
-                      📍 {location.address}
+                       {location.address}
                     </p>
                   )}
                   
@@ -309,7 +318,7 @@ export default function ManageLocationsPage() {
                         opacity: owners.length === 0 ? 0.6 : 1
                       }}
                     >
-                      👤 Assign{owners.length === 0 ? ' (No owners)' : ''}
+                       Assign{owners.length === 0 ? ' (No owners)' : ''}
                     </button>
                   )}
 
