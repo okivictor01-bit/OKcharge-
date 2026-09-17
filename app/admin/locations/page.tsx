@@ -38,18 +38,19 @@ export default function ManageLocationsPage() {
       setLocations(locationsData);
     }
 
-    // Get all owners
+    // Get all owners - REMOVED status filter to avoid RLS issues
     const { data: ownersData, error: ownersError } = await supabase
       .from('profiles')
-      .select('user_id, full_name')
-      .eq('role', 'owner')
-      .eq('status', 'approved');
+      .select('user_id, full_name, role, status')
+      .eq('role', 'owner');
 
     if (ownersError) {
       console.error('Error loading owners:', ownersError);
     } else if (ownersData) {
       console.log('Loaded owners:', ownersData);
       setOwners(ownersData);
+    } else {
+      console.log('No owners data returned');
     }
 
     setLoading(false);
@@ -122,7 +123,6 @@ export default function ManageLocationsPage() {
     try {
       console.log('Assigning owner:', { locationId, ownerId, ownersCount: owners.length });
       
-      // Check if owner exists in our loaded list
       const ownerExists = owners.find(o => o.user_id === ownerId);
       console.log('Owner exists in list:', ownerExists);
       
@@ -259,7 +259,7 @@ export default function ManageLocationsPage() {
                     }}
                     style={{ padding: '8px 15px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}
                   >
-                    ️ Print QR
+                    🖨️ Print QR
                   </button>
                   
                   {/* Quick Assign Owner Button */}
@@ -302,7 +302,7 @@ export default function ManageLocationsPage() {
                         opacity: owners.length === 0 ? 0.6 : 1
                       }}
                     >
-                       Assign{owners.length === 0 ? ' (No owners)' : ''}
+                      👤 Assign{owners.length === 0 ? ' (No owners)' : ''}
                     </button>
                   )}
 
