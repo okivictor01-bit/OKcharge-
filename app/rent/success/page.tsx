@@ -2,12 +2,71 @@
 
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Suspense } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 
 function SuccessContent() {
   const searchParams = useSearchParams();
   const reference = searchParams.get('ref');
   const ticket = searchParams.get('ticket');
+  
+  const [verifying, setVerifying] = useState(true);
+  const [verified, setVerified] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const verifyPayment = async () => {
+      if (!reference) {
+        setVerifying(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/verify-payment?ref=${reference}`);
+        const data = await response.json();
+
+        if (data.success) {
+          setVerified(true);
+        } else {
+          setError(data.error || 'Verification failed');
+        }
+      } catch (err) {
+        console.error('Verification error:', err);
+        setError('Could not verify payment');
+      } finally {
+        setVerifying(false);
+      }
+    };
+
+    verifyPayment();
+  }, [reference]);
+
+  if (verifying) {
+    return (
+      <main style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: 'sans-serif', backgroundColor: '#f0fdf4' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>⏳</div>
+          <h2 style={{ color: '#0f172a' }}>Verifying your payment...</h2>
+          <p style={{ color: '#64748b' }}>Please do not close this page.</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: 'sans-serif', backgroundColor: '#fef2f2' }}>
+        <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '16px', textAlign: 'center', maxWidth: '500px' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>❌</div>
+          <h2 style={{ color: '#991b1b' }}>Verification Failed</h2>
+          <p style={{ color: '#64748b', marginBottom: '20px' }}>{error}</p>
+          <p style={{ fontSize: '14px', color: '#64748b' }}>If money was deducted, please contact support with reference: {reference}</p>
+          <Link href="/" style={{ display: 'inline-block', marginTop: '20px', padding: '12px 24px', backgroundColor: '#ef4444', color: 'white', borderRadius: '8px', textDecoration: 'none', fontWeight: 'bold' }}>
+            Back to Home
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main style={{ 
@@ -31,7 +90,7 @@ function SuccessContent() {
       }}>
         <div style={{ fontSize: '64px', marginBottom: '20px' }}>✅</div>
         <h1 style={{ fontSize: '24px', color: '#0f172a', marginBottom: '10px' }}>Payment Successful!</h1>
-        <p style={{ color: '#64748b', marginBottom: '30px' }}>Your power bank rental is confirmed.</p>
+        <p style={{ color: '#64748b', marginBottom: '30px' }}>Your power bank rental is confirmed and the owner has been credited.</p>
         
         {/* Ticket Information */}
         <div style={{ 
