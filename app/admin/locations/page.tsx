@@ -106,19 +106,30 @@ export default function ManageLocationsPage() {
     }
   };
 
-  // NEW: Quick Assign Function
+  // UPDATED: Quick Assign Function with better error handling
   const handleQuickAssign = async (locationId: string, ownerId: string) => {
-    const { error } = await supabase
-      .from('locations')
-      .update({ owner_id: ownerId || null })
-      .eq('id', locationId);
+    try {
+      // Convert empty string to null to avoid UUID foreign key errors
+      const ownerIdValue = ownerId === "" ? null : ownerId;
+      
+      const { error } = await supabase
+        .from('locations')
+        .update({ owner_id: ownerIdValue })
+        .eq('id', locationId);
 
-    if (!error) {
-      alert('Owner assigned successfully!');
-      setQuickAssignId(null);
-      loadData();
-    } else {
-      alert('Error: ' + error.message);
+      if (error) {
+        if (error.code === '23503') {
+          alert('Error: This owner no longer exists in the system.');
+        } else {
+          alert('Error: ' + error.message);
+        }
+      } else {
+        alert('Owner assigned successfully!');
+        setQuickAssignId(null);
+        loadData();
+      }
+    } catch (err) {
+      alert('An unexpected error occurred.');
     }
   };
 
@@ -196,7 +207,7 @@ export default function ManageLocationsPage() {
                   </p>
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', width: '100%' }}>
                   <button 
                     onClick={() => {
                       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=https://okcharge.pages.dev/rent?location=${location.location_code}`;
@@ -219,10 +230,10 @@ export default function ManageLocationsPage() {
                     }}
                     style={{ padding: '8px 15px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}
                   >
-                    🖨️ Print QR
+                    ️ Print QR
                   </button>
                   
-                  {/* NEW: Quick Assign Owner Button */}
+                  {/* Quick Assign Owner Button */}
                   {quickAssignId === location.id ? (
                     <div style={{ display: 'flex', gap: '5px', marginTop: '10px', width: '100%' }}>
                       <select 
