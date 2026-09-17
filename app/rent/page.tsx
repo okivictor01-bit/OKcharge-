@@ -22,6 +22,7 @@ function RentContent() {
   const currentPrice = prices[duration] || 100;
 
   useEffect(() => {
+    // REMOVED: The localStorage redirect logic that caused the loop
     let attempts = 0;
     const script = document.createElement("script");
     script.src = "https://js.paystack.co/v1/inline.js";
@@ -38,14 +39,12 @@ function RentContent() {
     document.body.appendChild(script);
 
     if (locationCode) {
-      console.log('Looking for location:', locationCode);
       supabase
         .from("locations")
         .select("id, owner_id")
         .eq("location_code", locationCode)
         .single()
         .then(({ data: locData, error: locError }) => {
-          console.log('Location query result:', { locData, locError });
           if (!locError && locData) {
             setLocationId(locData.id);
             supabase
@@ -54,7 +53,6 @@ function RentContent() {
               .eq("user_id", locData.owner_id)
               .single()
               .then(({ data: ownerData }) => {
-                console.log('Owner subaccount:', ownerData);
                 if (ownerData?.paystack_subaccount_code) {
                   setOwnerSubaccount(ownerData.paystack_subaccount_code);
                 }
@@ -83,20 +81,7 @@ function RentContent() {
     const currentDuration = duration;
     const currentLocationId = locationId;
 
-    console.log('Creating rental with:', {
-      ticket_code: ticket,
-      customer_name: currentFormData.name,
-      customer_phone: currentFormData.phone,
-      duration_hours: parseInt(currentDuration),
-      amount_paid: currentPriceValue,
-      paystack_reference: reference,
-      status: "pending",
-      started_at: new Date().toISOString(),
-      location_id: currentLocationId,
-      locationCode: locationCode
-    });
-
-    const { data: insertData, error: insertError } = await supabase.from("rentals").insert({
+    const { error: insertError } = await supabase.from("rentals").insert({
       ticket_code: ticket,
       customer_name: currentFormData.name,
       customer_phone: currentFormData.phone,
@@ -106,15 +91,11 @@ function RentContent() {
       status: "pending",
       started_at: new Date().toISOString(),
       location_id: currentLocationId
-    }).select();
-
-    console.log('Insert result:', { insertData, insertError });
+    });
 
     if (insertError) {
       setLoading(false);
-      const errorMessage = `Failed to initialize rental.\n\nError: ${insertError.message}\nCode: ${insertError.code}\n\nLocation: ${locationCode}\nLocation ID: ${currentLocationId}`;
-      alert(errorMessage);
-      console.error("Database error:", insertError);
+      alert(`Failed to initialize rental: ${insertError.message}`);
       return;
     }
 
@@ -123,8 +104,6 @@ function RentContent() {
       : `${currentFormData.phone}@okcharge.ng`;
 
     function onPaymentSuccess(response: any) {
-      console.log("Payment successful:", response);
-      // Update status to paid
       supabase.from("rentals")
         .update({ status: "paid" })
         .eq("paystack_reference", response.reference)
@@ -134,11 +113,8 @@ function RentContent() {
     }
 
     function onPaymentClose() {
-      console.log("Payment window closed");
       setLoading(false);
-      
-      // ALWAYS redirect to success page for verification after 2 seconds
-      // The success page will verify with Paystack if payment succeeded
+      // Redirect to success page to let the verification API handle it
       setTimeout(() => {
         window.location.href = `/rent/success?ref=${reference}&ticket=${ticket}`;
       }, 2000);
@@ -177,14 +153,6 @@ function RentContent() {
     } catch (error: any) {
       setLoading(false);
       alert("Payment error: " + error.message);
-    }
-  };
-
-  // Manual recovery button
-  const handleManualRecovery = () => {
-    const ref = prompt("Please enter your payment reference (starts with OKCHARGE_):");
-    if (ref) {
-      window.location.href = `/rent/success?ref=${ref}&ticket=RECOVERY`;
     }
   };
 
@@ -232,25 +200,6 @@ function RentContent() {
             {loading ? "Processing..." : !paystackReady ? "Loading Payment..." : `Pay ₦${currentPrice} & Rent Now`}
           </button>
         </form>
-
-        {/* Manual Recovery Button */}
-        <div style={{ marginTop: "20px", textAlign: "center" }}>
-          <button 
-            onClick={handleManualRecovery}
-            style={{ 
-              padding: "12px 24px", 
-              backgroundColor: "#3b82f6", 
-              color: "white", 
-              border: "none", 
-              borderRadius: "8px", 
-              cursor: "pointer",
-              fontSize: "14px",
-              fontWeight: "600"
-            }}
-          >
-             Having issues? Recover payment manually
-          </button>
-        </div>
       </div>
     </main>
   );
