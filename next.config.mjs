@@ -1,9 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
+  // NOTE: 'output: export' has been removed. 
+  // It must be removed to allow API routes (like /api/verify-payment) to work.
+  
   images: {
-    unoptimized: true,
+    domains: ['api.qrserver.com'],
   },
-};
+}
 
-export default nextConfig;
+export default nextConfig
