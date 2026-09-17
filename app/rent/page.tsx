@@ -17,11 +17,23 @@ function RentContent() {
   const [selectedDuration, setSelectedDuration] = useState("1");
   const [ownerSubaccount, setOwnerSubaccount] = useState<string | null>(null);
   const [locationId, setLocationId] = useState<string | null>(null);
+  const [paymentReference, setPaymentReference] = useState("");
+  const [ticketCode, setTicketCode] = useState("");
 
   const prices: Record<string, number> = { "1": 100, "3": 250, "5": 400, "24": 900 };
   const currentPrice = prices[duration] || 100;
 
   useEffect(() => {
+    // Check if user is returning from payment
+    const returningRef = localStorage.getItem("okcharge_payment_ref");
+    const returningTicket = localStorage.getItem("okcharge_ticket");
+    if (returningRef && returningTicket) {
+      // Clear and redirect
+      localStorage.removeItem("okcharge_payment_ref");
+      localStorage.removeItem("okcharge_ticket");
+      window.location.href = `/rent/success?ref=${returningRef}&ticket=${returningTicket}`;
+    }
+
     let attempts = 0;
     const script = document.createElement("script");
     script.src = "https://js.paystack.co/v1/inline.js";
@@ -49,7 +61,7 @@ function RentContent() {
             supabase
               .from("profiles")
               .select("paystack_subaccount_code")
-              .eq("user_id", locData.owner_id) // Fixed: should be user_id, not id
+              .eq("user_id", locData.owner_id)
               .single()
               .then(({ data: ownerData }) => {
                 if (ownerData?.paystack_subaccount_code) {
@@ -73,15 +85,19 @@ function RentContent() {
 
     setLoading(true);
     const reference = `OKCHARGE_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-    const ticketCode = `TKT-${Math.floor(100000 + Math.random() * 900000)}`;
+    const ticket = `TKT-${Math.floor(100000 + Math.random() * 900000)}`;
+    
+    setPaymentReference(reference);
+    setTicketCode(ticket);
+
     const currentFormData = { ...formData };
     const currentPriceValue = currentPrice;
     const currentDuration = duration;
     const currentLocationId = locationId;
 
-    // 1. SAVE RENTAL AS "PENDING" FIRST (Bulletproof mobile fix)
+    // Save rental as "pending"
     const { error: insertError } = await supabase.from("rentals").insert({
-      ticket_code: ticketCode,
+      ticket_code: ticket,
       customer_name: currentFormData.name,
       customer_phone: currentFormData.phone,
       duration_hours: parseInt(currentDuration),
@@ -105,12 +121,14 @@ function RentContent() {
 
     function onPaymentSuccess(response: any) {
       console.log("Payment successful:", response);
-      // Update status to paid
+      localStorage.setItem("okcharge_payment_ref", response.reference);
+      localStorage.setItem("okcharge_ticket", ticket);
+      
       supabase.from("rentals")
         .update({ status: "paid" })
         .eq("paystack_reference", response.reference)
         .then(() => {
-          window.location.href = `/rent/success?ref=${response.reference}&ticket=${ticketCode}`;
+          window.location.href = `/rent/success?ref=${response.reference}&ticket=${ticket}`;
         });
     }
 
@@ -118,10 +136,25 @@ function RentContent() {
       console.log("Payment window closed");
       setLoading(false);
       
-      // On mobile, bank redirects often trigger onClose instead of callback.
-      // Since we already saved the rental as "pending", we redirect to the 
-      // success page, which will verify the payment with Paystack automatically.
-      window.location.href = `/rent/success?ref=${reference}&ticket=${ticketCode}`;
+      // Save to localStorage for recovery
+      localStorage.setItem("okcharge_payment_ref", reference);
+      localStorage.setItem("okcharge_ticket", ticket);
+      
+      // Show confirmation dialog
+      setTimeout(() => {
+        const confirmed = window.confirm(
+          "Payment window closed.\n\nDid you complete your payment successfully?\n\nClick OK if YES, Cancel if NO."
+        );
+        
+        if (confirmed) {
+          // User says they paid - redirect to verification page
+          window.location.href = `/rent/success?ref=${reference}&ticket=${ticket}`;
+        } else {
+          // User says they didn't pay - clean up
+          localStorage.removeItem("okcharge_payment_ref");
+          localStorage.removeItem("okcharge_ticket");
+        }
+      }, 1000);
     }
 
     try {
@@ -134,7 +167,7 @@ function RentContent() {
         amount: currentPriceValue * 100,
         currency: "NGN",
         ref: reference,
-        callback_url: "https://okcharge.pages.dev/rent/success", // Explicit redirect URL
+        callback_url: "https://okcharge.pages.dev/rent/success",
         firstname: currentFormData.name.split(" ")[0],
         lastname: currentFormData.name.split(" ").slice(1).join(" ") || "",
         phone: currentFormData.phone,
@@ -145,7 +178,7 @@ function RentContent() {
           custom_fields: [
             { display_name: "Customer Name", variable_name: "customer_name", value: currentFormData.name },
             { display_name: "Duration", variable_name: "duration", value: `${currentDuration} hour${currentDuration !== "1" ? "s" : ""}` },
-            { display_name: "Ticket Code", variable_name: "ticket_code", value: ticketCode }
+            { display_name: "Ticket Code", variable_name: "ticket_code", value: ticket }
           ]
         },
         callback: onPaymentSuccess,
@@ -160,10 +193,18 @@ function RentContent() {
     }
   };
 
+  // Manual recovery button
+  const handleManualRecovery = () => {
+    const ref = prompt("Please enter your payment reference (starts with OKCHARGE_):");
+    if (ref) {
+      window.location.href = `/rent/success?ref=${ref}&ticket=RECOVERY`;
+    }
+  };
+
   return (
     <main style={{ fontFamily: "sans-serif", backgroundColor: "#f1f5f9", minHeight: "100vh", paddingBottom: "120px" }}>
       <div style={{ background: "linear-gradient(135deg, #0f172a, #1e293b)", color: "white", padding: "30px 20px", textAlign: "center", borderBottomLeftRadius: "30px", borderBottomRightRadius: "30px" }}>
-        <div style={{ fontSize: "40px", marginBottom: "10px" }}>🔋</div>
+        <div style={{ fontSize: "40px", marginBottom: "10px" }}></div>
         <h1 style={{ margin: 0, fontSize: "24px", fontWeight: "700" }}>Complete Your Rental</h1>
       </div>
 
@@ -204,6 +245,25 @@ function RentContent() {
             {loading ? "Processing..." : !paystackReady ? "Loading Payment..." : `Pay ₦${currentPrice} & Rent Now`}
           </button>
         </form>
+
+        {/* Manual Recovery Button */}
+        <div style={{ marginTop: "20px", textAlign: "center" }}>
+          <button 
+            onClick={handleManualRecovery}
+            style={{ 
+              padding: "12px 24px", 
+              backgroundColor: "#3b82f6", 
+              color: "white", 
+              border: "none", 
+              borderRadius: "8px", 
+              cursor: "pointer",
+              fontSize: "14px",
+              fontWeight: "600"
+            }}
+          >
+            🔧 Having issues? Recover payment manually
+          </button>
+        </div>
       </div>
     </main>
   );
