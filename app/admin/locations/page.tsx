@@ -11,6 +11,7 @@ export default function ManageLocationsPage() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingLocation, setEditingLocation] = useState<any>(null);
+  const [quickAssignId, setQuickAssignId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     locationCode: '',
     name: '',
@@ -105,6 +106,22 @@ export default function ManageLocationsPage() {
     }
   };
 
+  // NEW: Quick Assign Function
+  const handleQuickAssign = async (locationId: string, ownerId: string) => {
+    const { error } = await supabase
+      .from('locations')
+      .update({ owner_id: ownerId || null })
+      .eq('id', locationId);
+
+    if (!error) {
+      alert('Owner assigned successfully!');
+      setQuickAssignId(null);
+      loadData();
+    } else {
+      alert('Error: ' + error.message);
+    }
+  };
+
   const openEditModal = (location: any) => {
     setEditingLocation(location);
     setFormData({
@@ -175,7 +192,7 @@ export default function ManageLocationsPage() {
                   )}
                   
                   <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>
-                    Owner: {location.profiles?.full_name || 'Not assigned'}
+                    Owner: <strong>{location.profiles?.full_name || 'Not assigned'}</strong>
                   </p>
                 </div>
 
@@ -204,6 +221,36 @@ export default function ManageLocationsPage() {
                   >
                     🖨️ Print QR
                   </button>
+                  
+                  {/* NEW: Quick Assign Owner Button */}
+                  {quickAssignId === location.id ? (
+                    <div style={{ display: 'flex', gap: '5px', marginTop: '10px', width: '100%' }}>
+                      <select 
+                        defaultValue={location.owner_id || ''} 
+                        onChange={(e) => handleQuickAssign(location.id, e.target.value)}
+                        style={{ ...inputStyle, flex: 1 }}
+                      >
+                        <option value="">No owner</option>
+                        {owners.map((owner: any) => (
+                          <option key={owner.user_id} value={owner.user_id}>{owner.full_name}</option>
+                        ))}
+                      </select>
+                      <button 
+                        onClick={() => setQuickAssignId(null)}
+                        style={{ ...btnStyle, backgroundColor: '#64748b', padding: '8px 12px' }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => setQuickAssignId(location.id)}
+                      style={{ padding: '8px 15px', backgroundColor: '#8b5cf6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}
+                    >
+                      👤 Assign
+                    </button>
+                  )}
+
                   <button 
                     onClick={() => openEditModal(location)}
                     style={{ padding: '8px 15px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}
