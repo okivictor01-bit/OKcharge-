@@ -38,17 +38,24 @@ export default function ManageLocationsPage() {
       setLocations(locationsData);
     }
 
-    // Get all owners - REMOVED status filter to avoid RLS issues
+    // Get all owners - only those with valid auth accounts
     const { data: ownersData, error: ownersError } = await supabase
       .from('profiles')
       .select('user_id, full_name, role, status')
-      .eq('role', 'owner');
+      .eq('role', 'owner')
+      .not('user_id', 'is', null);
 
     if (ownersError) {
       console.error('Error loading owners:', ownersError);
     } else if (ownersData) {
-      console.log('Loaded owners:', ownersData);
-      setOwners(ownersData);
+      // Double-check: filter out any with NULL or invalid user_ids
+      const validOwners = ownersData.filter(owner => 
+        owner.user_id && 
+        owner.user_id !== '00000000-0000-0000-0000-000000000000' &&
+        owner.user_id !== '11111111-1111-1111-1111-111111111111'
+      );
+      console.log('Valid owners:', validOwners);
+      setOwners(validOwners);
     } else {
       console.log('No owners data returned');
     }
@@ -190,7 +197,7 @@ export default function ManageLocationsPage() {
       {/* Debug info */}
       <div style={{ backgroundColor: '#fef3c7', padding: '15px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px' }}>
         <strong>Debug:</strong> Loaded {locations.length} locations, {owners.length} owners
-        {owners.length === 0 && <div style={{ color: '#b91c1c', marginTop: '5px' }}>️ No owners loaded! Check browser console.</div>}
+        {owners.length === 0 && <div style={{ color: '#b91c1c', marginTop: '5px' }}>⚠️ No owners loaded! Check browser console.</div>}
       </div>
 
       {/* Stats */}
