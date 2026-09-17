@@ -50,12 +50,14 @@ function RentContent() {
     document.body.appendChild(script);
 
     if (locationCode) {
+      console.log('Looking for location:', locationCode);
       supabase
         .from("locations")
         .select("id, owner_id")
         .eq("location_code", locationCode)
         .single()
         .then(({ data: locData, error: locError }) => {
+          console.log('Location query result:', { locData, locError });
           if (!locError && locData) {
             setLocationId(locData.id);
             supabase
@@ -64,6 +66,7 @@ function RentContent() {
               .eq("user_id", locData.owner_id)
               .single()
               .then(({ data: ownerData }) => {
+                console.log('Owner subaccount:', ownerData);
                 if (ownerData?.paystack_subaccount_code) {
                   setOwnerSubaccount(ownerData.paystack_subaccount_code);
                 }
@@ -95,8 +98,20 @@ function RentContent() {
     const currentDuration = duration;
     const currentLocationId = locationId;
 
-    // Save rental as "pending"
-    const { error: insertError } = await supabase.from("rentals").insert({
+    console.log('Creating rental with:', {
+      ticket_code: ticket,
+      customer_name: currentFormData.name,
+      customer_phone: currentFormData.phone,
+      duration_hours: parseInt(currentDuration),
+      amount_paid: currentPriceValue,
+      paystack_reference: reference,
+      status: "pending",
+      started_at: new Date().toISOString(),
+      location_id: currentLocationId,
+      locationCode: locationCode
+    });
+
+    const { data: insertData, error: insertError } = await supabase.from("rentals").insert({
       ticket_code: ticket,
       customer_name: currentFormData.name,
       customer_phone: currentFormData.phone,
@@ -106,11 +121,14 @@ function RentContent() {
       status: "pending",
       started_at: new Date().toISOString(),
       location_id: currentLocationId
-    });
+    }).select();
+
+    console.log('Insert result:', { insertData, insertError });
 
     if (insertError) {
       setLoading(false);
-      alert("Failed to initialize rental. Please try again.");
+      const errorMessage = `Failed to initialize rental.\n\nError: ${insertError.message}\nCode: ${insertError.code}\n\nLocation: ${locationCode}\nLocation ID: ${currentLocationId}`;
+      alert(errorMessage);
       console.error("Database error:", insertError);
       return;
     }
@@ -204,7 +222,7 @@ function RentContent() {
   return (
     <main style={{ fontFamily: "sans-serif", backgroundColor: "#f1f5f9", minHeight: "100vh", paddingBottom: "120px" }}>
       <div style={{ background: "linear-gradient(135deg, #0f172a, #1e293b)", color: "white", padding: "30px 20px", textAlign: "center", borderBottomLeftRadius: "30px", borderBottomRightRadius: "30px" }}>
-        <div style={{ fontSize: "40px", marginBottom: "10px" }}></div>
+        <div style={{ fontSize: "40px", marginBottom: "10px" }}>🔋</div>
         <h1 style={{ margin: 0, fontSize: "24px", fontWeight: "700" }}>Complete Your Rental</h1>
       </div>
 
