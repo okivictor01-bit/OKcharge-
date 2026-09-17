@@ -19,7 +19,7 @@ export async function onRequest(context) {
   try {
     // 1. Verify with Paystack
     console.log('[VERIFY] Verifying with Paystack...');
-    console.log('[VERIFY] Using key:', env.PAYSTACK_SECRET_KEY ? 'Key exists' : 'MISSING!');
+    console.log('[VERIFY] Using key:', env.PAYSTACK_SECRET_KEY ? 'Key exists ✓' : 'MISSING! ✗');
     
     const paystackResponse = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
       method: 'GET',
@@ -38,10 +38,10 @@ export async function onRequest(context) {
     }
     
     const paystackData = await paystackResponse.json();
-    console.log('[VERIFY] Paystack data:', JSON.stringify(paystackData, null, 2));
+    console.log('[VERIFY] Paystack data status:', paystackData.status);
 
     if (!paystackData.status) {
-      console.error('[VERIFY] Paystack returned false status:', paystackData);
+      console.error('[VERIFY] Paystack returned false status');
       throw new Error('Paystack verification failed');
     }
 
@@ -62,23 +62,23 @@ export async function onRequest(context) {
 
     const amountPaid = paystackData.data.amount / 100;
     const platformShare = amountPaid * 0.5;
-    console.log('[VERIFY] Amount:', amountPaid, 'Platform share:', platformShare);
+    console.log('[VERIFY] Amount paid:', amountPaid, 'Platform share:', platformShare);
 
     // 2. Setup Supabase
     const supabaseUrl = env.SUPABASE_URL;
     const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY;
 
-    console.log('[VERIFY] Supabase URL:', supabaseUrl ? 'Exists' : 'MISSING!');
-    console.log('[VERIFY] Supabase Key:', supabaseKey ? 'Exists' : 'MISSING!');
+    console.log('[VERIFY] Supabase URL:', supabaseUrl ? 'Exists ✓' : 'MISSING! ');
+    console.log('[VERIFY] Supabase Key:', supabaseKey ? 'Exists ✓' : 'MISSING! ✗');
 
     if (!supabaseUrl || !supabaseKey) {
       console.error('[VERIFY] Missing Supabase credentials');
       throw new Error('Database configuration error');
     }
 
-    // 3. Find the rental
-    console.log('[VERIFY] Searching for rental with reference:', reference);
-    const rentalRes = await fetch(`${supabaseUrl}/rest/v1/rentals?payment_reference=eq.${reference}&select=id,location_id,status,amount_paid`, {
+    // 3. Find the rental - FIXED: use paystack_reference (not payment_reference)
+    console.log('[VERIFY] Searching for rental with paystack_reference:', reference);
+    const rentalRes = await fetch(`${supabaseUrl}/rest/v1/rentals?paystack_reference=eq.${reference}&select=id,location_id,status,amount_paid`, {
       headers: { 
         apikey: supabaseKey, 
         Authorization: `Bearer ${supabaseKey}`,
@@ -96,7 +96,7 @@ export async function onRequest(context) {
     }
     
     const rentals = await rentalRes.json();
-    console.log('[VERIFY] Rental search result:', JSON.stringify(rentals, null, 2));
+    console.log('[VERIFY] Found rentals:', rentals.length);
     
     if (!rentals || rentals.length === 0) {
       console.error('[VERIFY] Rental not found for reference:', reference);
@@ -110,7 +110,7 @@ export async function onRequest(context) {
     }
 
     const rental = rentals[0];
-    console.log('[VERIFY] Found rental:', rental.id, 'Status:', rental.status);
+    console.log('[VERIFY] Found rental ID:', rental.id, 'Status:', rental.status);
 
     if (rental.status === 'active' || rental.status === 'paid') {
       console.log('[VERIFY] Already verified, returning success');
@@ -123,7 +123,7 @@ export async function onRequest(context) {
     }
 
     // 4. Get location to find owner
-    console.log('[VERIFY] Getting location info for:', rental.location_id);
+    console.log('[VERIFY] Getting location info for ID:', rental.location_id);
     const locationRes = await fetch(`${supabaseUrl}/rest/v1/locations?id=eq.${rental.location_id}&select=owner_id`, {
       headers: { 
         apikey: supabaseKey, 
@@ -139,9 +139,9 @@ export async function onRequest(context) {
     
     const locations = await locationRes.json();
     const location = locations ? locations[0] : null;
-    console.log('[VERIFY] Location:', location);
+    console.log('[VERIFY] Location found:', location ? 'Yes' : 'No');
 
-    // 5. Update rental status
+    // 5. Update rental status to active
     console.log('[VERIFY] Updating rental status to active...');
     const updateRes = await fetch(`${supabaseUrl}/rest/v1/rentals?id=eq.${rental.id}`, {
       method: 'PATCH',
@@ -161,12 +161,12 @@ export async function onRequest(context) {
       const errorText = await updateRes.text();
       console.error('[VERIFY] Update failed:', errorText);
     } else {
-      console.log('[VERIFY] Rental updated successfully');
+      console.log('[VERIFY] Rental updated successfully ✓');
     }
 
     // 6. Update owner's wallet balance
     if (location && location.owner_id) {
-      console.log('[VERIFY] Updating owner wallet for:', location.owner_id);
+      console.log('[VERIFY] Updating owner wallet for user_id:', location.owner_id);
       const ownerRes = await fetch(`${supabaseUrl}/rest/v1/profiles?user_id=eq.${location.owner_id}&select=wallet_balance,total_earnings`, {
         headers: { 
           apikey: supabaseKey, 
@@ -205,14 +205,14 @@ export async function onRequest(context) {
         if (!updateWalletRes.ok) {
           console.error('[VERIFY] Wallet update failed:', updateWalletRes.status);
         } else {
-          console.log('[VERIFY] Owner wallet updated successfully!');
+          console.log('[VERIFY] Owner wallet updated successfully! ✓');
         }
       }
     } else {
       console.log('[VERIFY] No location or owner found, skipping wallet update');
     }
 
-    console.log('[VERIFY] Verification complete, success!');
+    console.log('[VERIFY] Verification complete! ✓');
     return new Response(JSON.stringify({ 
       success: true, 
       message: 'Payment verified and owner balance updated',
