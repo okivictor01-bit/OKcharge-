@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // NOTE: 'output: export' has been removed. 
-  // It must be removed to allow API routes (like /api/verify-payment) to work.
-  
+  output: 'export', // Required for Cloudflare Pages static build
   images: {
     domains: ['api.qrserver.com'],
   },
